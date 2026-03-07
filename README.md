@@ -1,1 +1,1 @@
-# Federated-Agent-Protocol
+# Federated Agent Protocol
