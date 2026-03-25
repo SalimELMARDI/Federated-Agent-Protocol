@@ -1,0 +1,32 @@
+{
+  "envelope": {
+    "protocol": "FAP",
+    "version": "0.1",
+    "message_type": "fap.task.create",
+    "task_id": "task_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "run_id": "run_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "message_id": "msg_11111111111111111111111111111111",
+    "sender_id": "coordinator",
+    "recipient_id": "participant_docs",
+    "domain_id": "docs",
+    "trace_id": "trace_cccccccccccccccccccccccccccccccc",
+    "timestamp": "2026-03-23T12:00:00Z",
+    "governance": {
+      "privacy_class": "internal",
+      "sharing_mode": "summary_only",
+      "policy_ref": "policy.docs.v0",
+      "provenance_ref": null
+    }
+  },
+  "payload": {
+    "title": "Search local docs",
+    "description": "Perform a deterministic local docs search.",
+    "requested_capabilities": [
+      "docs.search"
+    ],
+    "input_query": "privacy",
+    "constraints": [],
+    "deadline": null,
+    "budget": null
+  }
+}

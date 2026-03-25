@@ -1,0 +1,6 @@
+{
+  "event_id": "log-002",
+  "source": "privacy-monitor",
+  "message": "Privacy export policy applied to a local participant response.",
+  "level": "info"
+}

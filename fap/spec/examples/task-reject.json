@@ -1,0 +1,22 @@
+{
+  "envelope": {
+    "protocol": "FAP",
+    "version": "0.1",
+    "message_type": "fap.task.reject",
+    "task_id": "task_99999999999999999999999999999999",
+    "run_id": "run_88888888888888888888888888888888",
+    "message_id": "msg_33333333333333333333333333333333",
+    "sender_id": "participant_docs",
+    "recipient_id": "coordinator",
+    "domain_id": "participant_docs",
+    "trace_id": "trace_77777777777777777777777777777777",
+    "timestamp": "2026-03-23T12:02:00Z",
+    "governance": null
+  },
+  "payload": {
+    "participant_id": "participant_docs",
+    "reason": "Unsupported capabilities requested: docs.translate",
+    "retryable": false,
+    "details": null
+  }
+}

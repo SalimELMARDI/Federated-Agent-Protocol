@@ -1,0 +1,30 @@
+{
+  "envelope": {
+    "protocol": "FAP",
+    "version": "0.1",
+    "message_type": "fap.task.create",
+    "task_id": "task-demo-privacy-review",
+    "run_id": "run-demo-privacy-review",
+    "message_id": "msg-demo-task-create",
+    "sender_id": "demo-client",
+    "recipient_id": "coordinator",
+    "domain_id": "demo",
+    "trace_id": "trace-demo-privacy-review",
+    "timestamp": "2026-03-24T00:00:00+00:00",
+    "governance": {
+      "privacy_class": "internal",
+      "sharing_mode": "summary_only",
+      "policy_ref": "policy.demo.v0"
+    }
+  },
+  "payload": {
+    "title": "Review privacy handling across local docs, knowledge, and logs",
+    "description": "Coordinate a governed federated review of privacy-related evidence across three participant domains and merge the resulting summaries.",
+    "requested_capabilities": [],
+    "input_query": "privacy",
+    "constraints": [
+      "Return governed summaries only.",
+      "Do not export raw participant-local records."
+    ]
+  }
+}

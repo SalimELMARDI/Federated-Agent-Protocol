@@ -1,0 +1,1 @@
+Deterministic guidance for summarizing local knowledge-base material without external retrieval.

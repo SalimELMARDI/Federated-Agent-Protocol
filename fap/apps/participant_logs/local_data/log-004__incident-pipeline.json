@@ -1,0 +1,6 @@
+{
+  "event_id": "log-004",
+  "source": "incident-pipeline",
+  "message": "Incident correlation event generated from local operational logs.",
+  "level": "warn"
+}

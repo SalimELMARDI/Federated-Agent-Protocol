@@ -1,0 +1,19 @@
+# Repo-level local tooling
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local-only assistant notes
+AGENT.md
+
+# SQLite/dev state
+*.db
+
+# Nested project local state
+fap/.venv/
+fap/.pytest_cache/
+fap/.mypy_cache/
+fap/.ruff_cache/
+fap/fap.egg-info/
+fap/fap_coordinator.db

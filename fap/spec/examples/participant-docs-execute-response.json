@@ -1,0 +1,89 @@
+{
+  "task_complete": {
+    "envelope": {
+      "protocol": "FAP",
+      "version": "0.1",
+      "message_type": "fap.task.complete",
+      "task_id": "task_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "run_id": "run_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "message_id": "msg_44444444444444444444444444444444",
+      "sender_id": "participant_docs",
+      "recipient_id": "coordinator",
+      "domain_id": "participant_docs",
+      "trace_id": "trace_cccccccccccccccccccccccccccccccc",
+      "timestamp": "2026-03-23T12:03:00Z",
+      "governance": null
+    },
+    "payload": {
+      "participant_id": "participant_docs",
+      "status": "completed",
+      "summary": "[SUMMARY ONLY] Matched docs: Privacy Policy Memo",
+      "confidence": null,
+      "result_ref": null,
+      "source_refs": [
+        {
+          "participant_id": "participant_docs",
+          "source_id": "doc-002",
+          "source_title": "Privacy Policy Memo",
+          "source_path": "examples/local_docs/data/doc-002__privacy-policy-memo.json"
+        }
+      ]
+    }
+  },
+  "policy_attest": {
+    "envelope": {
+      "protocol": "FAP",
+      "version": "0.1",
+      "message_type": "fap.policy.attest",
+      "task_id": "task_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "run_id": "run_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "message_id": "msg_55555555555555555555555555555555",
+      "sender_id": "participant_docs",
+      "recipient_id": "coordinator",
+      "domain_id": "participant_docs",
+      "trace_id": "trace_cccccccccccccccccccccccccccccccc",
+      "timestamp": "2026-03-23T12:03:01Z",
+      "governance": null
+    },
+    "payload": {
+      "participant_id": "participant_docs",
+      "policy_ref": "policy.docs.v0",
+      "original_privacy_class": "internal",
+      "applied_sharing_mode": "summary_only",
+      "transform_type": "summary_only",
+      "attestation_note": null
+    }
+  },
+  "aggregate_submit": {
+    "envelope": {
+      "protocol": "FAP",
+      "version": "0.1",
+      "message_type": "fap.aggregate.submit",
+      "task_id": "task_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "run_id": "run_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "message_id": "msg_66666666666666666666666666666666",
+      "sender_id": "participant_docs",
+      "recipient_id": "coordinator",
+      "domain_id": "participant_docs",
+      "trace_id": "trace_cccccccccccccccccccccccccccccccc",
+      "timestamp": "2026-03-23T12:03:02Z",
+      "governance": null
+    },
+    "payload": {
+      "participant_id": "participant_docs",
+      "contribution_type": "summary",
+      "summary": "[SUMMARY ONLY] Matched docs: Privacy Policy Memo",
+      "vote": null,
+      "confidence": null,
+      "provenance_ref": "msg_55555555555555555555555555555555",
+      "source_refs": [
+        {
+          "participant_id": "participant_docs",
+          "source_id": "doc-002",
+          "source_title": "Privacy Policy Memo",
+          "source_path": "examples/local_docs/data/doc-002__privacy-policy-memo.json"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "event_id": "log-003",
+  "source": "search-worker",
+  "message": "Search query completed for archived reference lookups.",
+  "level": "info"
+}

@@ -1,0 +1,23 @@
+{
+  "envelope": {
+    "protocol": "FAP",
+    "version": "0.1",
+    "message_type": "fap.task.complete",
+    "task_id": "task_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "run_id": "run_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "message_id": "msg_44444444444444444444444444444444",
+    "sender_id": "participant_docs",
+    "recipient_id": "coordinator",
+    "domain_id": "participant_docs",
+    "trace_id": "trace_cccccccccccccccccccccccccccccccc",
+    "timestamp": "2026-03-23T12:03:00Z",
+    "governance": null
+  },
+  "payload": {
+    "participant_id": "participant_docs",
+    "status": "completed",
+    "summary": "[SUMMARY ONLY] Matched docs: Privacy Policy Memo",
+    "confidence": null,
+    "result_ref": null
+  }
+}

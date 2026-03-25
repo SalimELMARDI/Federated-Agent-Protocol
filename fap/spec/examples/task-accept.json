@@ -1,0 +1,26 @@
+{
+  "envelope": {
+    "protocol": "FAP",
+    "version": "0.1",
+    "message_type": "fap.task.accept",
+    "task_id": "task_dddddddddddddddddddddddddddddddd",
+    "run_id": "run_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "message_id": "msg_22222222222222222222222222222222",
+    "sender_id": "participant_docs",
+    "recipient_id": "coordinator",
+    "domain_id": "participant_docs",
+    "trace_id": "trace_ffffffffffffffffffffffffffffffff",
+    "timestamp": "2026-03-23T12:01:00Z",
+    "governance": null
+  },
+  "payload": {
+    "participant_id": "participant_docs",
+    "accepted_capabilities": [
+      "docs.search",
+      "docs.lookup"
+    ],
+    "constraints": [],
+    "estimated_confidence": null,
+    "note": null
+  }
+}

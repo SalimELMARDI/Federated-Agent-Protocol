@@ -1,0 +1,170 @@
+{
+  "run_id": "run_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "task_id": "task_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "status": "aggregated_recorded",
+  "created_message_id": "msg_11111111111111111111111111111111",
+  "last_message_type": "fap.aggregate.result",
+  "message_count": 14,
+  "accepted_participants": [
+    "participant_docs",
+    "participant_kb",
+    "participant_logs"
+  ],
+  "rejected_participants": [],
+  "completed_participants": [
+    {
+      "participant_id": "participant_docs",
+      "status": "completed",
+      "summary": "[SUMMARY ONLY] Matched docs: Privacy Policy Memo",
+      "message_id": "msg_44444444444444444444444444444444",
+      "source_refs": [
+        {
+          "participant_id": "participant_docs",
+          "source_id": "doc-002",
+          "source_title": "Privacy Policy Memo",
+          "source_path": "examples/local_docs/data/doc-002__privacy-policy-memo.json"
+        }
+      ]
+    },
+    {
+      "participant_id": "participant_kb",
+      "status": "completed",
+      "summary": "[SUMMARY ONLY] Matched KB entries: Privacy controls",
+      "message_id": "msg_77777777777777777777777777777777",
+      "source_refs": [
+        {
+          "participant_id": "participant_kb",
+          "source_id": "kb-001",
+          "source_title": "Privacy controls",
+          "source_path": "examples/local_kb/data/kb-001__privacy-controls.json"
+        }
+      ]
+    },
+    {
+      "participant_id": "participant_logs",
+      "status": "completed",
+      "summary": "[SUMMARY ONLY] Matched log events: privacy-monitor",
+      "message_id": "msg_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "source_refs": [
+        {
+          "participant_id": "participant_logs",
+          "source_id": "log-002",
+          "source_title": "privacy-monitor",
+          "source_path": "examples/local_logs/data/log-002__privacy-monitor.log"
+        }
+      ]
+    }
+  ],
+  "policy_attestations": [
+    {
+      "participant_id": "participant_docs",
+      "policy_ref": "policy.docs.v0",
+      "original_privacy_class": "internal",
+      "applied_sharing_mode": "summary_only",
+      "transform_type": "summary_only",
+      "message_id": "msg_55555555555555555555555555555555"
+    },
+    {
+      "participant_id": "participant_kb",
+      "policy_ref": "policy.kb.v0",
+      "original_privacy_class": "internal",
+      "applied_sharing_mode": "summary_only",
+      "transform_type": "summary_only",
+      "message_id": "msg_88888888888888888888888888888888"
+    },
+    {
+      "participant_id": "participant_logs",
+      "policy_ref": "policy.logs.v0",
+      "original_privacy_class": "internal",
+      "applied_sharing_mode": "summary_only",
+      "transform_type": "summary_only",
+      "message_id": "msg_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ],
+  "aggregate_submissions": [
+    {
+      "participant_id": "participant_docs",
+      "contribution_type": "summary",
+      "summary": "[SUMMARY ONLY] Matched docs: Privacy Policy Memo",
+      "vote": null,
+      "confidence": null,
+      "provenance_ref": "msg_55555555555555555555555555555555",
+      "message_id": "msg_66666666666666666666666666666666",
+      "source_refs": [
+        {
+          "participant_id": "participant_docs",
+          "source_id": "doc-002",
+          "source_title": "Privacy Policy Memo",
+          "source_path": "examples/local_docs/data/doc-002__privacy-policy-memo.json"
+        }
+      ]
+    },
+    {
+      "participant_id": "participant_kb",
+      "contribution_type": "summary",
+      "summary": "[SUMMARY ONLY] Matched KB entries: Privacy controls",
+      "vote": null,
+      "confidence": null,
+      "provenance_ref": "msg_88888888888888888888888888888888",
+      "message_id": "msg_99999999999999999999999999999999",
+      "source_refs": [
+        {
+          "participant_id": "participant_kb",
+          "source_id": "kb-001",
+          "source_title": "Privacy controls",
+          "source_path": "examples/local_kb/data/kb-001__privacy-controls.json"
+        }
+      ]
+    },
+    {
+      "participant_id": "participant_logs",
+      "contribution_type": "summary",
+      "summary": "[SUMMARY ONLY] Matched log events: privacy-monitor",
+      "vote": null,
+      "confidence": null,
+      "provenance_ref": "msg_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "message_id": "msg_cccccccccccccccccccccccccccccccc",
+      "source_refs": [
+        {
+          "participant_id": "participant_logs",
+          "source_id": "log-002",
+          "source_title": "privacy-monitor",
+          "source_path": "examples/local_logs/data/log-002__privacy-monitor.log"
+        }
+      ]
+    }
+  ],
+  "aggregate_results": [
+    {
+      "aggregation_mode": "summary_merge",
+      "final_answer": "[participant_docs] [SUMMARY ONLY] Matched docs: Privacy Policy Memo\n[participant_kb] [SUMMARY ONLY] Matched KB entries: Privacy controls\n[participant_logs] [SUMMARY ONLY] Matched log events: privacy-monitor",
+      "participant_count": 3,
+      "provenance_refs": [
+        "msg_55555555555555555555555555555555",
+        "msg_88888888888888888888888888888888",
+        "msg_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "source_refs": [
+        {
+          "participant_id": "participant_docs",
+          "source_id": "doc-002",
+          "source_title": "Privacy Policy Memo",
+          "source_path": "examples/local_docs/data/doc-002__privacy-policy-memo.json"
+        },
+        {
+          "participant_id": "participant_kb",
+          "source_id": "kb-001",
+          "source_title": "Privacy controls",
+          "source_path": "examples/local_kb/data/kb-001__privacy-controls.json"
+        },
+        {
+          "participant_id": "participant_logs",
+          "source_id": "log-002",
+          "source_title": "privacy-monitor",
+          "source_path": "examples/local_logs/data/log-002__privacy-monitor.log"
+        }
+      ],
+      "message_id": "msg_dddddddddddddddddddddddddddddddd"
+    }
+  ]
+}

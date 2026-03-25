@@ -1,0 +1,6 @@
+{
+  "event_id": "log-001",
+  "source": "auth-service",
+  "message": "User login audit event recorded for governed review.",
+  "level": "info"
+}

@@ -1,0 +1,1 @@
+"""Participant logs application package."""
