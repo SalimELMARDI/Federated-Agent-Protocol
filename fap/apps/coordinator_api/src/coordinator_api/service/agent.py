@@ -65,6 +65,9 @@ async def run_agent_request_summary_merge(
     participant_logs_evaluate_url: str,
     participant_logs_execute_url: str,
     participant_logs_transport: httpx.AsyncBaseTransport | None = None,
+    participant_llm_evaluate_url: str | None = None,
+    participant_llm_execute_url: str | None = None,
+    participant_llm_transport: httpx.AsyncBaseTransport | None = None,
 ) -> AgentRunResult:
     """Convert a plain request into a canonical task-create and run orchestration."""
     task_create_message = _build_task_create_message(request)
@@ -85,6 +88,9 @@ async def run_agent_request_summary_merge(
         participant_logs_evaluate_url=participant_logs_evaluate_url,
         participant_logs_execute_url=participant_logs_execute_url,
         participant_logs_transport=participant_logs_transport,
+        participant_llm_evaluate_url=participant_llm_evaluate_url,
+        participant_llm_execute_url=participant_llm_execute_url,
+        participant_llm_transport=participant_llm_transport,
     )
 
     return AgentRunResult(

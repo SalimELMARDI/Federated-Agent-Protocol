@@ -44,6 +44,7 @@ where = [
     "apps/participant_docs/src",
     "apps/participant_logs/src",
     "apps/participant_kb/src",
+    "apps/participant_llm/src",
     "packages/fap_client/src",
     "packages/fap_mcp/src",
     "packages/fap_core/src",
@@ -58,6 +59,8 @@ testpaths = [
     "apps/participant_docs/tests",
     "apps/participant_logs/tests",
     "apps/participant_kb/tests",
+    "apps/participant_llm/tests",
+    "test-feature-llm-participant",
     "tests",
 ]
 addopts = ["--import-mode=importlib"]
@@ -66,6 +69,7 @@ pythonpath = [
     "apps/participant_docs/src",
     "apps/participant_logs/src",
     "apps/participant_kb/src",
+    "apps/participant_llm/src",
     "packages/fap_client/src",
     "packages/fap_mcp/src",
     "packages/fap_core/src",
@@ -87,6 +91,7 @@ mypy_path = [
     "apps/participant_docs/src",
     "apps/participant_logs/src",
     "apps/participant_kb/src",
+    "apps/participant_llm/src",
     "packages/fap_client/src",
     "packages/fap_mcp/src",
     "packages/fap_core/src",
