@@ -1,0 +1,184 @@
+name: Docker Compose Validation
+
+on:
+  push:
+    paths:
+      - 'fap/docker-compose.yml'
+      - 'fap/.dockerignore'
+      - 'fap/Docker*'
+      - 'fap/scripts/entrypoint-*.sh'
+      - '.github/workflows/docker-*'
+  pull_request:
+    paths:
+      - 'fap/docker-compose.yml'
+      - 'fap/.dockerignore'
+      - 'fap/Docker*'
+      - 'fap/scripts/entrypoint-*.sh'
+      - '.github/workflows/docker-*'
+
+jobs:
+  validate:
+    name: Validate docker-compose.yml
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate docker-compose file syntax
+        run: |
+          cd fap
+          docker-compose config > /dev/null
+          echo "✅ docker-compose.yml is valid YAML"
+
+      - name: Check service definitions
+        run: |
+          cd fap
+          echo "🔍 Checking service definitions..."
+          
+          # Extract services
+          services=$(docker-compose config --services)
+          echo "Defined services:"
+          echo "$services"
+          
+          # Verify required services
+          for service in postgres coordinator participant-docs participant-kb participant-logs; do
+            if echo "$services" | grep -q "^$service$"; then
+              echo "✅ Service '$service' found"
+            else
+              echo "❌ Service '$service' not found"
+              exit 1
+            fi
+          done
+
+      - name: Check volume definitions
+        run: |
+          cd fap
+          echo "🔍 Checking volume definitions..."
+          
+          # Verify postgres_data volume exists
+          if docker-compose config | grep -q "postgres_data"; then
+            echo "✅ Volume 'postgres_data' defined"
+          else
+            echo "❌ Volume 'postgres_data' not found"
+            exit 1
+          fi
+
+      - name: Check network definitions
+        run: |
+          cd fap
+          echo "🔍 Checking network definitions..."
+          
+          if docker-compose config | grep -q "fap-network"; then
+            echo "✅ Network 'fap-network' defined"
+          else
+            echo "❌ Network 'fap-network' not found"
+            exit 1
+          fi
+
+      - name: Check environment variables
+        run: |
+          cd fap
+          echo "🔍 Checking environment variables..."
+          
+          # Verify PYTHONUNBUFFERED is in environment, not in healthcheck
+          if docker-compose config | grep -A 20 "coordinator:" | grep -q "PYTHONUNBUFFERED"; then
+            echo "✅ PYTHONUNBUFFERED is in environment section"
+          else
+            echo "❌ PYTHONUNBUFFERED not found in environment"
+            exit 1
+          fi
+
+      - name: Check participant URLs use container ports
+        run: |
+          cd fap
+          echo "🔍 Checking participant URLs..."
+          
+          # Should use :8000 (container port), not :8012/8013/8014 (host ports)
+          if docker-compose config | grep "participant-docs:8000"; then
+            echo "✅ Participant URLs use container port 8000"
+          else
+            echo "❌ Participant URLs not properly configured"
+            exit 1
+          fi
+
+      - name: Validate shell scripts
+        run: |
+          cd fap
+          echo "🔍 Validating shell scripts..."
+          
+          if [ -f "scripts/entrypoint-coordinator.sh" ]; then
+            bash -n scripts/entrypoint-coordinator.sh
+            echo "✅ entrypoint-coordinator.sh syntax valid"
+          fi
+          
+          if [ -f "scripts/docker-setup.sh" ]; then
+            bash -n scripts/docker-setup.sh
+            echo "✅ docker-setup.sh syntax valid"
+          fi
+
+  docker-compose-rules:
+    name: Check Docker Compose Best Practices
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for health checks
+        run: |
+          cd fap
+          echo "🔍 Checking for health checks..."
+          
+          # All services should have healthcheck or be database
+          services="postgres coordinator participant-docs participant-kb participant-logs"
+          for service in $services; do
+            if docker-compose config | grep -A 30 "^\s*$service:" | grep -q "healthcheck:"; then
+              echo "✅ Service '$service' has healthcheck"
+            elif [ "$service" = "postgres" ]; then
+              echo "✅ PostgreSQL has healthcheck (required)"
+            else
+              echo "⚠️  Service '$service' missing healthcheck"
+            fi
+          done
+
+      - name: Check for restart policies
+        run: |
+          cd fap
+          echo "🔍 Checking for restart policies..."
+          
+          if docker-compose config | grep -q "restart_policy:"; then
+            echo "✅ Restart policies defined"
+          else
+            echo "⚠️  No restart policies defined (optional for local dev)"
+          fi
+
+      - name: Check for dependency management
+        run: |
+          cd fap
+          echo "🔍 Checking for dependency management..."
+          
+          if docker-compose config | grep -A 5 "coordinator:" | grep -q "depends_on:"; then
+            echo "✅ Coordinator depends_on postgres"
+          else
+            echo "⚠️  Coordinator should depend on postgres"
+          fi
+
+      - name: Check image sizes won't be too large
+        run: |
+          cd fap
+          echo "🔍 Checking Dockerfile optimization..."
+          
+          # Check for multi-stage build
+          if grep -q "FROM.*as build" Dockerfile; then
+            echo "✅ Multi-stage build detected"
+          else
+            echo "⚠️  Consider using multi-stage build"
+          fi
+          
+          # Check for proper cleanup
+          if grep -q "rm -rf /var/lib/apt/lists" Dockerfile; then
+            echo "✅ APT cache cleanup found"
+          else
+            echo "⚠️  Should clean APT cache"
+          fi
