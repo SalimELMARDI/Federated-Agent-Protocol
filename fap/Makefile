@@ -34,5 +34,7 @@ demo-kb:
 demo-logs:
 	$(PYTHON) -m uvicorn participant_logs.main:app --host $(HOST) --port $(LOGS_PORT)
 
+# Note: demo-llm requires PARTICIPANT_LLM_ENABLE=true to acknowledge trust model
+# See apps/participant_llm/README.md § Trust Model for details
 demo-llm:
 	$(PYTHON) -m uvicorn participant_llm.main:app --host $(HOST) --port $(LLM_PORT)

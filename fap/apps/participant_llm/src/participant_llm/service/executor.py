@@ -45,9 +45,9 @@ class ParticipantExecutionResult(BaseModel):
     aggregate_submit_message: AggregateSubmitMessage
 
 
-def execute_task_create(message: TaskCreateMessage) -> ParticipantExecutionResult:
+async def execute_task_create(message: TaskCreateMessage) -> ParticipantExecutionResult:
     """Execute a task-create request against the configured LLM and apply shared policy."""
-    local_content, source_refs = _query_llm_and_build_source_refs(message.payload.input_query)
+    local_content, source_refs = await _query_llm_and_build_source_refs(message.payload.input_query)
     governance = message.envelope.governance
     local_result = LocalResult(
         participant_id=PARTICIPANT_ID,
@@ -117,13 +117,17 @@ def execute_task_create(message: TaskCreateMessage) -> ParticipantExecutionResul
     )
 
 
-def _query_llm_and_build_source_refs(query: str) -> tuple[str, list[SourceRef]]:
-    """Call the LLM with the query and build deterministic source refs from the response."""
-    try:
-        llm_response = call_llm(query)
-    except LLMCallError as exc:
-        return f"LLM query failed: {exc}", []
+async def _query_llm_and_build_source_refs(query: str) -> tuple[str, list[SourceRef]]:
+    """Call the LLM with the query and build deterministic source refs from the response.
 
+    Raises:
+        LLMCallError: Upstream LLM provider call failed. Caller should handle by
+                      returning HTTP 503 to signal execution failure to coordinator.
+    """
+    # Let LLMCallError propagate instead of catching and converting to string
+    # This makes LLM failures protocol-visible (HTTP 503) rather than treating
+    # them as successful task completions with error strings
+    llm_response = await call_llm(query)
     source_refs = _build_source_refs(llm_response)
     return llm_response.content, source_refs
 

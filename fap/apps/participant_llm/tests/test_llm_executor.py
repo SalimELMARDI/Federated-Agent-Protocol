@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from pytest import MonkeyPatch
 
 from fap_core.clocks import utc_now
@@ -16,13 +17,13 @@ STUB_ENDPOINT = "https://stub.example.com/v1/messages"
 STUB_LLM_CONTENT = "Privacy policies should restrict data sharing to minimum necessary."
 
 
-def _stub_call_llm(query: str) -> LLMResponse:
+async def _stub_call_llm(query: str) -> LLMResponse:
     """Return a canned LLM response for tests."""
     del query
     return LLMResponse(content=STUB_LLM_CONTENT, model=STUB_MODEL, endpoint_url=STUB_ENDPOINT)
 
 
-def _stub_call_llm_error(query: str) -> LLMResponse:
+async def _stub_call_llm_error(query: str) -> LLMResponse:
     """Always raise LLMCallError — simulates a failed API call."""
     del query
     raise LLMCallError("API key is missing")
@@ -56,26 +57,28 @@ def build_task_create_message(
     )
 
 
-def test_execution_returns_task_complete_policy_attest_and_aggregate_submit(
+@pytest.mark.asyncio
+async def test_execution_returns_task_complete_policy_attest_and_aggregate_submit(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """Execution should return canonical task-complete, policy-attest, and aggregate-submit."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_call_llm)
 
-    result = execute_task_create(build_task_create_message(input_query="privacy"))
+    result = await execute_task_create(build_task_create_message(input_query="privacy"))
 
     assert result.task_complete_message.envelope.message_type == MessageType.FAP_TASK_COMPLETE
     assert result.policy_attest_message.envelope.message_type == MessageType.FAP_POLICY_ATTEST
     assert result.aggregate_submit_message.envelope.message_type == MessageType.FAP_AGGREGATE_SUBMIT
 
 
-def test_execution_source_refs_carry_model_name_and_endpoint(
+@pytest.mark.asyncio
+async def test_execution_source_refs_carry_model_name_and_endpoint(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """Source refs should identify the model and endpoint used for the response."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_call_llm)
 
-    result = execute_task_create(build_task_create_message(input_query="privacy"))
+    result = await execute_task_create(build_task_create_message(input_query="privacy"))
 
     assert len(result.task_complete_message.payload.source_refs) == 1
     ref = result.task_complete_message.payload.source_refs[0]
@@ -89,26 +92,28 @@ def test_execution_source_refs_carry_model_name_and_endpoint(
     )
 
 
-def test_default_governance_applies_summary_only_to_internal_content(
+@pytest.mark.asyncio
+async def test_default_governance_applies_summary_only_to_internal_content(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """Missing governance should default to INTERNAL + SUMMARY_ONLY → summary prefix."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_call_llm)
 
-    result = execute_task_create(build_task_create_message(input_query="privacy"))
+    result = await execute_task_create(build_task_create_message(input_query="privacy"))
 
     assert result.policy_attest_message.payload.original_privacy_class == PrivacyClass.INTERNAL
     assert result.policy_attest_message.payload.applied_sharing_mode == SharingMode.SUMMARY_ONLY
     assert result.task_complete_message.payload.summary.startswith("[SUMMARY ONLY]")
 
 
-def test_public_raw_governance_returns_raw_llm_content(
+@pytest.mark.asyncio
+async def test_public_raw_governance_returns_raw_llm_content(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """PUBLIC + RAW governance should export the LLM response unchanged."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_call_llm)
 
-    result = execute_task_create(
+    result = await execute_task_create(
         build_task_create_message(
             input_query="privacy",
             governance=GovernanceMetadata(
@@ -122,13 +127,14 @@ def test_public_raw_governance_returns_raw_llm_content(
     assert result.task_complete_message.payload.summary == STUB_LLM_CONTENT
 
 
-def test_restricted_governance_returns_vote_only_summary(
+@pytest.mark.asyncio
+async def test_restricted_governance_returns_vote_only_summary(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """RESTRICTED governance should collapse to vote-only output."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_call_llm)
 
-    result = execute_task_create(
+    result = await execute_task_create(
         build_task_create_message(
             input_query="privacy",
             governance=GovernanceMetadata(
@@ -142,27 +148,28 @@ def test_restricted_governance_returns_vote_only_summary(
     assert result.task_complete_message.payload.summary == VOTE_ONLY_SUMMARY
 
 
-def test_failed_llm_call_returns_error_summary_with_empty_source_refs(
+@pytest.mark.asyncio
+async def test_failed_llm_call_propagates_llm_call_error(
     monkeypatch: MonkeyPatch,
 ) -> None:
-    """A failed LLM call should produce an error summary with no source refs."""
+    """A failed LLM call should propagate LLMCallError (triggering HTTP 503)."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_call_llm_error)
 
-    result = execute_task_create(build_task_create_message(input_query="privacy"))
+    with pytest.raises(LLMCallError) as excinfo:
+        await execute_task_create(build_task_create_message(input_query="privacy"))
+    
+    assert "API key is missing" in str(excinfo.value)
 
-    assert "LLM query failed" in result.task_complete_message.payload.summary
-    assert result.task_complete_message.payload.source_refs == []
-    assert result.aggregate_submit_message.payload.source_refs == []
 
-
-def test_result_envelope_preserves_task_run_and_trace_ids(
+@pytest.mark.asyncio
+async def test_result_envelope_preserves_task_run_and_trace_ids(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """All three result messages should preserve correlated task, run, and trace ids."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_call_llm)
     inbound = build_task_create_message(input_query="privacy")
 
-    result = execute_task_create(inbound)
+    result = await execute_task_create(inbound)
 
     assert result.task_complete_message.envelope.task_id == inbound.envelope.task_id
     assert result.task_complete_message.envelope.run_id == inbound.envelope.run_id
@@ -175,14 +182,15 @@ def test_result_envelope_preserves_task_run_and_trace_ids(
     assert result.aggregate_submit_message.envelope.trace_id == inbound.envelope.trace_id
 
 
-def test_result_envelope_sets_sender_recipient_and_message_types_correctly(
+@pytest.mark.asyncio
+async def test_result_envelope_sets_sender_recipient_and_message_types_correctly(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """All result messages should have correct participant routing and message types."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_call_llm)
     inbound = build_task_create_message(input_query="privacy")
 
-    result = execute_task_create(inbound)
+    result = await execute_task_create(inbound)
 
     assert result.task_complete_message.envelope.sender_id == "participant_llm"
     assert result.task_complete_message.envelope.recipient_id == inbound.envelope.sender_id

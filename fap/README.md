@@ -35,10 +35,11 @@ In the current alpha, the working runtime includes:
 
 - a shared protocol core with typed messages, codec, version-aware dispatch, policy, and identity helpers
 - a DB-first coordinator with durable `protocol_events` and `run_snapshots`
-- three real participants:
+- four real participants:
   - `participant_docs`
   - `participant_kb`
   - `participant_logs`
+  - `participant_llm`
 - participant-originated `fap.aggregate.submit`
 - `summary_merge` aggregation
 - source-level evidence refs carried through execution and aggregation payloads
@@ -67,6 +68,7 @@ and exposes these import packages from that shared distribution.
 | `participant_docs` | Reference participant for local document search and governed export |
 | `participant_kb` | Reference participant for local knowledge-base search and governed export |
 | `participant_logs` | Reference participant for local log search and governed export |
+| `participant_llm` | LLM-backed participant for external LLM queries with governed response export (requires explicit opt-in) |
 
 ## High-Level Architecture
 
@@ -94,12 +96,17 @@ flowchart LR
         DOCS[participant_docs]
         KB[participant_kb]
         LOGS[participant_logs]
+        LLM[participant_llm]
     end
 
     subgraph DATA[Local Sources]
         D1[Local Docs Files]
         D2[Local KB Files]
         D3[Local Log Files]
+    end
+
+    subgraph EXT[External Services]
+        LLMAPI[LLM Provider API]
     end
 
     U --> FC
@@ -119,10 +126,12 @@ flowchart LR
     ORCH --> DOCS
     ORCH --> KB
     ORCH --> LOGS
+    ORCH -.->|llm.* caps required| LLM
 
     DOCS --> D1
     KB --> D2
     LOGS --> D3
+    LLM --> LLMAPI
 ```
 
 ## Quickstart
@@ -178,6 +187,25 @@ The demo shows:
 - final `fap.aggregate.result`
 - durable run and event inspection
 
+### Demo With LLM Participant
+
+To include the LLM participant in the demo (4 participants):
+
+```cmd
+# Set required environment variables
+export PARTICIPANT_LLM_ENABLE=true
+export LLM_API_KEY=your_api_key_here
+
+make demo-coordinator-llm   # coordinator with LLM support on :8011
+make demo-docs              # :8012
+make demo-kb                # :8013
+make demo-logs              # :8014
+make demo-llm               # :8015
+make demo-run
+```
+
+The LLM participant requires explicit `llm.*` capabilities in requests. Queries without `llm.*` capabilities skip the LLM entirely. See [apps/participant_llm/README.md](apps/participant_llm/README.md) for the full trust model and configuration.
+
 ## Using The Python Client
 
 `fap_client` is the main Python integration surface for external apps and agents.
@@ -216,6 +244,7 @@ Example server startup is documented in [examples/mcp_integration](examples/mcp_
 | `apps/participant_docs` | Reference docs participant |
 | `apps/participant_kb` | Reference knowledge-base participant |
 | `apps/participant_logs` | Reference logs participant |
+| `apps/participant_llm` | LLM-backed participant (external LLM with governed response) |
 | `examples/` | Demo, integration, and local-source examples |
 | `spec/` | Protocol and runtime behavior docs aligned with the current alpha |
 
@@ -230,6 +259,7 @@ Example server startup is documented in [examples/mcp_integration](examples/mcp_
 - Python agent integration example: [examples/agent_integration/README.md](examples/agent_integration/README.md)
 - MCP integration example: [examples/mcp_integration/README.md](examples/mcp_integration/README.md)
 - alpha release note draft: [docs/release-notes/v0.1.0-alpha.md](docs/release-notes/v0.1.0-alpha.md)
+- LLM participant trust model: [apps/participant_llm/README.md](apps/participant_llm/README.md)
 - release checklist: [docs/release-checklist.md](docs/release-checklist.md)
 
 ## Verification

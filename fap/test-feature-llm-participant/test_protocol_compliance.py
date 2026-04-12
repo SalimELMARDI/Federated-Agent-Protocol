@@ -13,6 +13,7 @@ required by the FAP v0.1 specification:
 
 from __future__ import annotations
 
+import pytest
 from pytest import MonkeyPatch
 
 from fap_core.clocks import utc_now
@@ -29,7 +30,7 @@ STUB_ENDPOINT = "https://compliance.example.com/v1"
 STUB_CONTENT = "Compliance stub response."
 
 
-def _stub_llm(query: str) -> LLMResponse:
+async def _stub_llm(query: str) -> LLMResponse:
     del query
     return LLMResponse(content=STUB_CONTENT, model=STUB_MODEL, endpoint_url=STUB_ENDPOINT)
 
@@ -85,24 +86,27 @@ def test_task_accept_message_type_string() -> None:
     assert decision.envelope.message_type.value == "fap.task.accept"
 
 
-def test_task_complete_message_type_string(monkeypatch: MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_task_complete_message_type_string(monkeypatch: MonkeyPatch) -> None:
     """fap.task.complete message type must match the FAP spec literal."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_llm)
-    result = execute_task_create(_build_message())
+    result = await execute_task_create(_build_message())
     assert result.task_complete_message.envelope.message_type.value == "fap.task.complete"
 
 
-def test_policy_attest_message_type_string(monkeypatch: MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_policy_attest_message_type_string(monkeypatch: MonkeyPatch) -> None:
     """fap.policy.attest message type must match the FAP spec literal."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_llm)
-    result = execute_task_create(_build_message())
+    result = await execute_task_create(_build_message())
     assert result.policy_attest_message.envelope.message_type.value == "fap.policy.attest"
 
 
-def test_aggregate_submit_message_type_string(monkeypatch: MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_aggregate_submit_message_type_string(monkeypatch: MonkeyPatch) -> None:
     """fap.aggregate.submit message type must match the FAP spec literal."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_llm)
-    result = execute_task_create(_build_message())
+    result = await execute_task_create(_build_message())
     assert result.aggregate_submit_message.envelope.message_type.value == "fap.aggregate.submit"
 
 
@@ -111,12 +115,13 @@ def test_aggregate_submit_message_type_string(monkeypatch: MonkeyPatch) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_all_output_envelopes_have_sender_id_participant_llm(
+@pytest.mark.asyncio
+async def test_all_output_envelopes_have_sender_id_participant_llm(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """All three output envelopes must identify participant_llm as the sender."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_llm)
-    result = execute_task_create(_build_message())
+    result = await execute_task_create(_build_message())
 
     for msg in (
         result.task_complete_message,
@@ -128,12 +133,13 @@ def test_all_output_envelopes_have_sender_id_participant_llm(
         )
 
 
-def test_all_output_envelopes_have_domain_id_participant_llm(
+@pytest.mark.asyncio
+async def test_all_output_envelopes_have_domain_id_participant_llm(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """All three output envelopes must set domain_id to 'participant_llm'."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_llm)
-    result = execute_task_create(_build_message())
+    result = await execute_task_create(_build_message())
 
     for msg in (
         result.task_complete_message,
@@ -145,13 +151,14 @@ def test_all_output_envelopes_have_domain_id_participant_llm(
         )
 
 
-def test_all_output_envelopes_route_back_to_inbound_sender(
+@pytest.mark.asyncio
+async def test_all_output_envelopes_route_back_to_inbound_sender(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """All three output envelopes must address the inbound message's sender as recipient."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_llm)
     inbound = _build_message()
-    result = execute_task_create(inbound)
+    result = await execute_task_create(inbound)
 
     for msg in (
         result.task_complete_message,
@@ -163,13 +170,14 @@ def test_all_output_envelopes_route_back_to_inbound_sender(
         )
 
 
-def test_all_output_envelopes_mirror_task_run_trace_ids(
+@pytest.mark.asyncio
+async def test_all_output_envelopes_mirror_task_run_trace_ids(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """All three output envelopes must carry the exact task_id, run_id, trace_id from inbound."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_llm)
     inbound = _build_message()
-    result = execute_task_create(inbound)
+    result = await execute_task_create(inbound)
 
     for msg in (
         result.task_complete_message,
@@ -186,26 +194,29 @@ def test_all_output_envelopes_mirror_task_run_trace_ids(
 # ---------------------------------------------------------------------------
 
 
-def test_source_ref_participant_id_is_participant_llm(monkeypatch: MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_source_ref_participant_id_is_participant_llm(monkeypatch: MonkeyPatch) -> None:
     """source_ref.participant_id must be 'participant_llm'."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_llm)
-    result = execute_task_create(_build_message())
+    result = await execute_task_create(_build_message())
 
     assert result.task_complete_message.payload.source_refs[0].participant_id == "participant_llm"
 
 
-def test_source_ref_source_id_is_model_name(monkeypatch: MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_source_ref_source_id_is_model_name(monkeypatch: MonkeyPatch) -> None:
     """source_ref.source_id must be the model name (machine-readable identifier)."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_llm)
-    result = execute_task_create(_build_message())
+    result = await execute_task_create(_build_message())
 
     assert result.task_complete_message.payload.source_refs[0].source_id == STUB_MODEL
 
 
-def test_source_ref_source_path_is_endpoint_url(monkeypatch: MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_source_ref_source_path_is_endpoint_url(monkeypatch: MonkeyPatch) -> None:
     """source_ref.source_path must be the API endpoint URL."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_llm)
-    result = execute_task_create(_build_message())
+    result = await execute_task_create(_build_message())
 
     assert result.task_complete_message.payload.source_refs[0].source_path == STUB_ENDPOINT
 
@@ -215,10 +226,11 @@ def test_source_ref_source_path_is_endpoint_url(monkeypatch: MonkeyPatch) -> Non
 # ---------------------------------------------------------------------------
 
 
-def test_aggregate_submit_contribution_type_is_summary(monkeypatch: MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_aggregate_submit_contribution_type_is_summary(monkeypatch: MonkeyPatch) -> None:
     """aggregate_submit contribution_type must be SUMMARY for a standard LLM response."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_llm)
-    result = execute_task_create(_build_message())
+    result = await execute_task_create(_build_message())
 
     assert (
         result.aggregate_submit_message.payload.contribution_type
@@ -226,20 +238,22 @@ def test_aggregate_submit_contribution_type_is_summary(monkeypatch: MonkeyPatch)
     )
 
 
-def test_aggregate_submit_participant_id_is_participant_llm(monkeypatch: MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_aggregate_submit_participant_id_is_participant_llm(monkeypatch: MonkeyPatch) -> None:
     """aggregate_submit.participant_id must identify this participant."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_llm)
-    result = execute_task_create(_build_message())
+    result = await execute_task_create(_build_message())
 
     assert result.aggregate_submit_message.payload.participant_id == "participant_llm"
 
 
-def test_aggregate_submit_provenance_ref_equals_policy_attest_message_id(
+@pytest.mark.asyncio
+async def test_aggregate_submit_provenance_ref_equals_policy_attest_message_id(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """aggregate_submit.provenance_ref must point to policy_attest.envelope.message_id."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_llm)
-    result = execute_task_create(_build_message())
+    result = await execute_task_create(_build_message())
 
     assert (
         result.aggregate_submit_message.payload.provenance_ref
@@ -247,12 +261,13 @@ def test_aggregate_submit_provenance_ref_equals_policy_attest_message_id(
     )
 
 
-def test_aggregate_submit_summary_equals_task_complete_summary(
+@pytest.mark.asyncio
+async def test_aggregate_submit_summary_equals_task_complete_summary(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """aggregate_submit.summary must be identical to task_complete.summary."""
     monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_llm)
-    result = execute_task_create(_build_message())
+    result = await execute_task_create(_build_message())
 
     assert (
         result.aggregate_submit_message.payload.summary

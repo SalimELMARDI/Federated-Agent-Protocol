@@ -16,10 +16,14 @@ Key invariants verified:
 
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
 
 import httpx
 import pytest
+
+# Enable participant_llm for tests (bypass trust model check)
+os.environ["PARTICIPANT_LLM_ENABLE"] = "true"
 
 from coordinator_api.service.orchestration import orchestrate_run_summary_merge
 from coordinator_api.service.persistence import PersistedEventSummary
@@ -36,7 +40,7 @@ from fap_core.messages import (
 )
 from participant_docs.main import create_app as create_participant_docs_app
 from participant_kb.main import create_app as create_participant_kb_app
-from participant_llm.adapters.llm_client import LLMResponse
+from participant_llm.adapters.llm_client import LLMCallError, LLMResponse
 from participant_llm.main import create_app as create_participant_llm_app
 from participant_logs.main import create_app as create_participant_logs_app
 
@@ -71,7 +75,7 @@ class _RecordingPersistence:
         return None
 
 
-def _stub_call_llm(query: str) -> LLMResponse:
+async def _stub_call_llm(query: str) -> LLMResponse:
     del query
     return LLMResponse(
         content=STUB_LLM_CONTENT,
@@ -117,10 +121,16 @@ def _make_llm_transport(monkeypatch: pytest.MonkeyPatch) -> httpx.ASGITransport:
 async def test_four_participants_all_accept_and_produce_aggregate(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """All four participants should accept, execute, and contribute to the aggregate."""
+    """All four participants should accept, execute, and contribute to the aggregate.
+
+    Note: Explicitly requests llm.query to ensure LLM participant accepts.
+    Empty capability requests would cause LLM to reject (security constraint).
+    """
     store = InMemoryRunStore()
     persistence = _RecordingPersistence()
-    create_msg = _build_task_create(requested_capabilities=[])
+    create_msg = _build_task_create(
+        requested_capabilities=["docs.search", "kb.lookup", "llm.query", "logs.summarize"]
+    )
     store.record_task_create(create_msg)
     llm_transport = _make_llm_transport(monkeypatch)
 
@@ -160,7 +170,9 @@ async def test_four_participant_final_answer_contains_all_contributors(
     """The aggregate final_answer must contain a labelled line for each participant."""
     store = InMemoryRunStore()
     persistence = _RecordingPersistence()
-    create_msg = _build_task_create(requested_capabilities=[])
+    create_msg = _build_task_create(
+        requested_capabilities=["docs.search", "kb.lookup", "llm.query", "logs.summarize"]
+    )
     store.record_task_create(create_msg)
     llm_transport = _make_llm_transport(monkeypatch)
 
@@ -196,7 +208,9 @@ async def test_participant_llm_appears_between_kb_and_logs_in_final_answer(
     """Alphabetical sort must place participant_llm after participant_kb and before participant_logs."""
     store = InMemoryRunStore()
     persistence = _RecordingPersistence()
-    create_msg = _build_task_create(requested_capabilities=[])
+    create_msg = _build_task_create(
+        requested_capabilities=["docs.search", "kb.lookup", "llm.query", "logs.summarize"]
+    )
     store.record_task_create(create_msg)
     llm_transport = _make_llm_transport(monkeypatch)
 
@@ -232,7 +246,9 @@ async def test_participant_llm_contribution_is_governed_summary_only(
     """Default governance (INTERNAL + SUMMARY_ONLY) must prefix the LLM line with [SUMMARY ONLY]."""
     store = InMemoryRunStore()
     persistence = _RecordingPersistence()
-    create_msg = _build_task_create(requested_capabilities=[])
+    create_msg = _build_task_create(
+        requested_capabilities=["docs.search", "kb.lookup", "llm.query", "logs.summarize"]
+    )
     store.record_task_create(create_msg)
     llm_transport = _make_llm_transport(monkeypatch)
 
@@ -268,7 +284,9 @@ async def test_four_participant_persistence_batches_follow_protocol_order(
     """Persistence batches must list accept × 4, then execute × 4, then aggregate.result."""
     store = InMemoryRunStore()
     persistence = _RecordingPersistence()
-    create_msg = _build_task_create(requested_capabilities=[])
+    create_msg = _build_task_create(
+        requested_capabilities=["docs.search", "kb.lookup", "llm.query", "logs.summarize"]
+    )
     store.record_task_create(create_msg)
     llm_transport = _make_llm_transport(monkeypatch)
 
@@ -347,7 +365,7 @@ async def test_llm_rejects_unsupported_capability_falls_back_to_three_participan
     """When participant_llm rejects, the aggregate must still complete with 3 participants."""
     store = InMemoryRunStore()
     persistence = _RecordingPersistence()
-    # docs.search is not a supported llm capability → llm will reject
+    # docs.search does not include any llm.* capability → llm will reject
     create_msg = _build_task_create(requested_capabilities=["docs.search"])
     store.record_task_create(create_msg)
     llm_transport = _make_llm_transport(monkeypatch)
@@ -375,3 +393,103 @@ async def test_llm_rejects_unsupported_capability_falls_back_to_three_participan
     # docs accepted docs.search; kb and logs rejected it too — only docs executes
     assert result.aggregate_result.payload.participant_count == 1
     assert result.aggregate_result.payload.final_answer.startswith("[participant_docs]")
+
+
+# ---------------------------------------------------------------------------
+# LLM execution failure handling
+# ---------------------------------------------------------------------------
+
+
+async def _stub_call_llm_error(query: str) -> LLMResponse:
+    """Stub that raises LLMCallError to simulate upstream provider failure."""
+    del query
+    raise LLMCallError("Network timeout")
+
+
+@pytest.mark.anyio
+async def test_llm_execution_failure_returns_http_503(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When LLM call fails, participant_llm should return HTTP 503, not success with error string.
+
+    This makes LLM failures protocol-visible to the coordinator rather than treating
+    them as successful completions with error strings that leak into aggregates.
+    """
+    monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_call_llm_error)
+    llm_app = create_participant_llm_app()
+
+    from fap_core import message_to_dict
+
+    create_msg = _build_task_create(
+        requested_capabilities=["docs.search", "kb.lookup", "llm.query", "logs.summarize"]
+    )
+
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=llm_app)) as client:
+        response = await client.post(
+            "http://participant-llm/execute",
+            json=message_to_dict(create_msg),
+        )
+
+    # Should return HTTP 503, not 200 with error string
+    assert response.status_code == 503
+    detail = response.json()["detail"]
+    assert detail["code"] == "llm_execution_failed"
+    assert detail["retryable"] is True
+    assert "LLMCallError" in detail["message"]
+
+
+@pytest.mark.anyio
+async def test_orchestration_continues_when_llm_execution_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When LLM execution fails (HTTP 503), orchestration should continue with other participants.
+
+    The coordinator handles HTTP 503 from participant_llm gracefully, and the other
+    participants still contribute to the aggregate result.
+    """
+    store = InMemoryRunStore()
+    persistence = _RecordingPersistence()
+    create_msg = _build_task_create(
+        requested_capabilities=["docs.search", "kb.lookup", "llm.query", "logs.summarize"]
+    )
+    store.record_task_create(create_msg)
+
+    # Patch LLM to fail during execution
+    monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_call_llm_error)
+    llm_transport = httpx.ASGITransport(app=create_participant_llm_app())
+
+    # Orchestration should not crash on LLM execution failure
+    result = await orchestrate_run_summary_merge(
+        create_msg.envelope.run_id,
+        store=store,
+        persistence_service=persistence,
+        participant_docs_evaluate_url="http://participant-docs/evaluate",
+        participant_docs_execute_url="http://participant-docs/execute",
+        participant_docs_transport=httpx.ASGITransport(app=create_participant_docs_app()),
+        participant_kb_evaluate_url="http://participant-kb/evaluate",
+        participant_kb_execute_url="http://participant-kb/execute",
+        participant_kb_transport=httpx.ASGITransport(app=create_participant_kb_app()),
+        participant_logs_evaluate_url="http://participant-logs/evaluate",
+        participant_logs_execute_url="http://participant-logs/execute",
+        participant_logs_transport=httpx.ASGITransport(app=create_participant_logs_app()),
+        participant_llm_evaluate_url="http://participant-llm/evaluate",
+        participant_llm_execute_url="http://participant-llm/execute",
+        participant_llm_transport=llm_transport,
+    )
+
+    # LLM should have accepted during evaluation
+    llm_eval = next(e for e in result.evaluations if e.participant == "participant_llm")
+    assert llm_eval.accepted is True
+
+    # But execution should have failed (HTTP 503)
+    llm_exec = next(e for e in result.executions if e.participant == "participant_llm")
+    assert llm_exec.executed is False  # Execution failed
+
+    # Other three participants should still contribute
+    assert result.aggregate_result.payload.participant_count == 3
+    final_answer = result.aggregate_result.payload.final_answer
+    assert "[participant_docs]" in final_answer
+    assert "[participant_kb]" in final_answer
+    assert "[participant_logs]" in final_answer
+    # LLM should NOT appear in final answer since execution failed
+    assert "[participant_llm]" not in final_answer

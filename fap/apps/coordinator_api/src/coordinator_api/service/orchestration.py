@@ -288,26 +288,39 @@ async def orchestrate_run_summary_merge(
     if llm_decision is not None and participant_llm_execute_url is not None:
         if isinstance(llm_decision, TaskAcceptMessage):
             t0 = time.perf_counter()
-            await _execute_participant_llm(
-                run_id,
-                store=store,
-                persistence_service=persistence_service,
-                execute_url=participant_llm_execute_url,
-                transport=participant_llm_transport,
-            )
-            logger.info(
-                "timing run_id=%s step=exec_llm elapsed_ms=%.1f",
-                run_id,
-                (time.perf_counter() - t0) * 1000,
-            )
-            executions.append(
-                ParticipantExecutionRecord(
-                    participant="participant_llm",
-                    executed=True,
-                    message_type="fap.task.complete",
+            try:
+                await _execute_participant_llm(
+                    run_id,
+                    store=store,
+                    persistence_service=persistence_service,
+                    execute_url=participant_llm_execute_url,
+                    transport=participant_llm_transport,
                 )
-            )
-            any_executed = True
+                logger.info(
+                    "timing run_id=%s step=exec_llm elapsed_ms=%.1f",
+                    run_id,
+                    (time.perf_counter() - t0) * 1000,
+                )
+                executions.append(
+                    ParticipantExecutionRecord(
+                        participant="participant_llm",
+                        executed=True,
+                        message_type="fap.task.complete",
+                    )
+                )
+                any_executed = True
+            except ParticipantOrchestrationFailedError as exc:
+                # LLM execution failure is considered non-critical for the overall aggregate.
+                # We log the error and continue so that other participants' results
+                # are still aggregated. This handles upstream provider outages gracefully.
+                logger.warning("run_id=%s participant_llm execution failed: %s", run_id, str(exc))
+                executions.append(
+                    ParticipantExecutionRecord(
+                        participant="participant_llm",
+                        executed=False,
+                        message_type="failed",
+                    )
+                )
         else:
             executions.append(
                 ParticipantExecutionRecord(

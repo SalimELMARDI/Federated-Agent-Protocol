@@ -84,6 +84,48 @@ Raw data never leaves participant boundaries; only approved exports are transmit
 
 **DB-first state:** The coordinator persists all events to a `protocol_events` table and maintains `run_snapshots`. Alembic manages schema migrations.
 
+### LLM Participant Governance Model
+
+**`participant_llm` has a different trust model than file-backed participants:**
+
+File-backed participants (`docs`, `kb`, `logs`):
+1. Search local data
+2. Apply policy engine to results
+3. Export only governed data
+4. **Raw data never leaves the boundary**
+
+LLM-backed participant (`participant_llm`):
+1. Receive raw `input_query` from coordinator
+2. **Send query to external LLM API (UNGOVERNED)** ⚠️
+3. Receive LLM response
+4. Apply policy engine to response
+5. Export governed response
+
+**Governance gap:** Input queries are transmitted to external LLM providers (Anthropic, OpenAI, Ollama) before governance. Only responses are governed.
+
+**Security implications:**
+- Queries may contain PII, PHI, credentials, or proprietary data
+- External transmission may violate data locality requirements (GDPR, HIPAA)
+- Requires explicit opt-in via `PARTICIPANT_LLM_ENABLE=true`
+- Service refuses to start without acknowledgment
+
+**Design decision (PR feedback #1 — @SalimELMARDI):**
+Rather than silently sending ungoverned data to external APIs, we require explicit operator acknowledgment through environment variable, startup warning logs, and comprehensive documentation. This makes the trust model transparent and prevents accidental deployment in environments where ungoverned external transmission would violate policy.
+
+**Design decision (PR feedback #2 — @SalimELMARDI):**
+The LLM participant rejects empty capability requests and requests without at least one `llm.*` capability. This prevents automatic participation in all queries by default. Callers must explicitly request `llm.query`, `llm.summarize`, or `llm.reason` to include the LLM participant in orchestration. This ensures that only queries intentionally meant for external LLM transmission will be sent to the LLM provider.
+
+**Design decision (PR feedback #3 — @SalimELMARDI):**
+The coordinator's `/ask` endpoint implements capability-based dispatch filtering. When no `llm.*` capability is present in `requested_capabilities`, the coordinator skips dispatching to the LLM participant entirely (passes `None` for LLM URLs to orchestration). This provides defense-in-depth: coordinator-side filtering prevents unnecessary network calls, and participant-side rejection (feedback #2) provides redundant safety if coordinator filtering is bypassed. Only requests with explicit `llm.*` capabilities trigger LLM dispatch.
+
+**Design decision (PR feedback #4 — @SalimELMARDI):**
+When the LLM provider call fails (network error, auth failure, rate limit), the participant returns HTTP 503 (Service Unavailable) instead of converting the failure to a successful `fap.task.complete` message with an error string. This makes failures protocol-visible to the coordinator. Before this change, failures were silently converted to success strings like `"LLM query failed: ..."` which leaked provider error messages into aggregates and made it impossible to distinguish failures from valid results. Now, the coordinator can detect execution failures and skip the LLM contribution, resulting in clean aggregates with only successful participant results.
+
+**Design decision (PR feedback #7 — @SalimELMARDI):**
+The LLM HTTP client uses async/await throughout (`httpx.AsyncClient`) instead of blocking I/O (`httpx.Client`). The entire call chain from API handler through executor to HTTP client is async. This prevents blocking the FastAPI event loop during LLM API calls, allowing concurrent request processing. Before this change, blocking HTTP calls could severely degrade performance under load as each LLM request would block the entire event loop.
+
+**Future enhancement:** Add input query governance to apply policy before external transmission (redaction, rejection, configurable modes).
+
 ### Package Responsibilities
 
 - **`fap_core`** — pure protocol: message types, enums, codec, identity helpers, policy engine. No I/O.
@@ -106,10 +148,13 @@ Copy `fap/.env.example` to `fap/.env` before running services:
 
 `participant_llm` specific (no `.env.example` entry, set in shell):
 
+- `PARTICIPANT_LLM_ENABLE` — **REQUIRED.** Set to `true` to acknowledge trust model and enable service
 - `LLM_PROVIDER` — `anthropic` (default) | `openai` | `ollama`
 - `LLM_MODEL` — model name, defaults to `claude-sonnet-4-20250514`
 - `LLM_API_KEY` — API key for Anthropic or OpenAI
 - `LLM_BASE_URL` — override base URL for OpenAI-compatible or Ollama endpoints
+
+**Trust Model Note:** `participant_llm` differs from file-backed participants in governance model. Input queries are sent to external LLM APIs **before** governance is applied (only responses are governed). This requires explicit opt-in via `PARTICIPANT_LLM_ENABLE=true`. See `fap/apps/participant_llm/README.md` § Trust Model for details.
 
 ## Alpha Limitations
 

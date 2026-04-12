@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import sys; sys.path.insert\\(0, 'apps/participant_llm/src'\\); from participant_llm.config import is_participant_llm_enabled; print\\(is_participant_llm_enabled\\(\\)\\)\")",
+      "Bash(.venv/Scripts/python.exe --version)",
+      "Bash(python -m pytest)",
+      "Bash(git:*)"
+    ]
+  }
+}

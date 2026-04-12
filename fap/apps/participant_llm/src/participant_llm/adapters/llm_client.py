@@ -27,16 +27,19 @@ class LLMResponse:
         self.endpoint_url = endpoint_url
 
 
-def call_llm(query: str) -> LLMResponse:
-    """Send a query to the configured LLM and return the response text."""
+async def call_llm(query: str) -> LLMResponse:
+    """Send a query to the configured LLM and return the response text.
+
+    Uses async HTTP client to avoid blocking the event loop in async FastAPI context.
+    """
     provider = get_llm_provider()
     model = get_llm_model()
     api_key = get_llm_api_key()
 
     if provider == "anthropic":
-        return _call_anthropic(query, model=model, api_key=api_key)
+        return await _call_anthropic(query, model=model, api_key=api_key)
     if provider in ("openai", "ollama"):
-        return _call_openai_compatible(query, model=model, api_key=api_key)
+        return await _call_openai_compatible(query, model=model, api_key=api_key)
 
     raise LLMCallError(
         f"Unsupported LLM provider: {provider!r}. "
@@ -44,8 +47,8 @@ def call_llm(query: str) -> LLMResponse:
     )
 
 
-def _call_anthropic(query: str, *, model: str, api_key: str) -> LLMResponse:
-    """Call the Anthropic Messages API."""
+async def _call_anthropic(query: str, *, model: str, api_key: str) -> LLMResponse:
+    """Call the Anthropic Messages API using async HTTP client."""
     headers = {
         "x-api-key": api_key,
         "anthropic-version": ANTHROPIC_VERSION,
@@ -58,8 +61,8 @@ def _call_anthropic(query: str, *, model: str, api_key: str) -> LLMResponse:
     }
 
     try:
-        with httpx.Client(timeout=60.0) as client:
-            response = client.post(ANTHROPIC_API_URL, headers=headers, json=body)
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(ANTHROPIC_API_URL, headers=headers, json=body)
     except httpx.HTTPError as exc:
         raise LLMCallError(f"Anthropic API request failed: {exc}") from exc
 
@@ -77,8 +80,8 @@ def _call_anthropic(query: str, *, model: str, api_key: str) -> LLMResponse:
     return LLMResponse(content=content, model=model, endpoint_url=ANTHROPIC_API_URL)
 
 
-def _call_openai_compatible(query: str, *, model: str, api_key: str) -> LLMResponse:
-    """Call an OpenAI-compatible chat completions endpoint."""
+async def _call_openai_compatible(query: str, *, model: str, api_key: str) -> LLMResponse:
+    """Call an OpenAI-compatible chat completions endpoint using async HTTP client."""
     base_url = get_llm_base_url()
     endpoint_url = f"{base_url}/chat/completions"
     headers = {
@@ -91,8 +94,8 @@ def _call_openai_compatible(query: str, *, model: str, api_key: str) -> LLMRespo
     }
 
     try:
-        with httpx.Client(timeout=60.0) as client:
-            response = client.post(endpoint_url, headers=headers, json=body)
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(endpoint_url, headers=headers, json=body)
     except httpx.HTTPError as exc:
         raise LLMCallError(f"OpenAI-compatible API request failed: {exc}") from exc
 

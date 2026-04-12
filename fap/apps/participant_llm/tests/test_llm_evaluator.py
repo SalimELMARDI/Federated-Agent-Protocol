@@ -49,36 +49,35 @@ def test_accepts_when_all_requested_capabilities_are_supported() -> None:
     assert decision.payload.accepted_capabilities == ["llm.query", "llm.summarize"]
 
 
-def test_accepts_when_requested_capabilities_is_empty() -> None:
-    """Empty requested capabilities should yield full-profile acceptance."""
+def test_rejects_when_requested_capabilities_is_empty() -> None:
+    """Empty requested capabilities should yield a reject decision (security constraint)."""
     inbound = build_task_create_message([])
 
     decision = evaluate_task_create(inbound)
 
-    assert isinstance(decision, TaskAcceptMessage)
-    assert decision.payload.accepted_capabilities == list(SUPPORTED_CAPABILITIES)
+    assert isinstance(decision, TaskRejectMessage)
+    assert "participant_llm requires explicit llm.* capabilities" in decision.payload.reason
 
 
-def test_rejects_when_one_unsupported_capability_is_requested() -> None:
-    """A single unsupported capability should yield a reject decision."""
+def test_accepts_when_non_llm_capabilities_are_present() -> None:
+    """Non-LLM capabilities (e.g. docs.search) should be ignored if at least one llm.* capability is present."""
     inbound = build_task_create_message(["llm.query", "docs.search"])
 
     decision = evaluate_task_create(inbound)
 
-    assert isinstance(decision, TaskRejectMessage)
-    assert decision.payload.retryable is False
-    assert "docs.search" in decision.payload.reason
+    assert isinstance(decision, TaskAcceptMessage)
+    # docs.search should be stripped from the accepted list
+    assert decision.payload.accepted_capabilities == ["llm.query"]
 
 
-def test_rejects_when_multiple_unsupported_capabilities_are_requested() -> None:
-    """Multiple unsupported capabilities should all be mentioned in the reject reason."""
-    inbound = build_task_create_message(["llm.query", "docs.search", "kb.lookup"])
+def test_rejects_when_unsupported_llm_capabilities_are_requested() -> None:
+    """Unsupported capabilities within the llm.* namespace should yield a reject decision."""
+    inbound = build_task_create_message(["llm.query", "llm.future_tech"])
 
     decision = evaluate_task_create(inbound)
 
     assert isinstance(decision, TaskRejectMessage)
-    assert "docs.search" in decision.payload.reason
-    assert "kb.lookup" in decision.payload.reason
+    assert "llm.future_tech" in decision.payload.reason
 
 
 def test_response_envelope_preserves_task_run_and_trace_ids() -> None:
@@ -94,7 +93,7 @@ def test_response_envelope_preserves_task_run_and_trace_ids() -> None:
 
 def test_response_envelope_sets_sender_recipient_and_message_type_correctly() -> None:
     """Response envelope should set participant routing and the correct decision type."""
-    inbound = build_task_create_message(["llm.query", "docs.unsupported"])
+    inbound = build_task_create_message(["llm.query", "llm.unsupported"])
 
     decision = evaluate_task_create(inbound)
 

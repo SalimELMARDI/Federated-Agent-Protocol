@@ -51,11 +51,27 @@ def evaluate_task_create(message: TaskCreateMessage) -> TaskAcceptMessage | Task
             ),
         )
 
+    # Federation-aware filtering: only check capabilities belonging to this domain.
+    # Capabilities for other participants (e.g. llm.*, kb.*) are ignored by this evaluator.
     unsupported_capabilities = [
         capability
         for capability in requested_capabilities
-        if capability not in supported_capabilities
+        if capability.startswith("docs.") and capability not in supported_capabilities
     ]
+    
+    # We also reject if the request is entirely comprised of other domains' capabilities,
+    # unless it's an empty request (handled above). This ensures we only participate 
+    # when something relevant to docs is requested.
+    has_relevant_capability = any(cap.startswith("docs.") for cap in requested_capabilities)
+    if not has_relevant_capability and requested_capabilities:
+         return TaskRejectMessage(
+            envelope=_build_response_envelope(message, message_type=MessageType.FAP_TASK_REJECT),
+            payload=TaskRejectPayload(
+                participant_id=PARTICIPANT_ID,
+                reason="No docs.* capabilities requested.",
+                retryable=False,
+            ),
+        )
 
     if unsupported_capabilities:
         unsupported_list = ", ".join(unsupported_capabilities)

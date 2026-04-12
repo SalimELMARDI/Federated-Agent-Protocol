@@ -17,6 +17,9 @@ This folder contains the validation test suite for the `participant_llm` feature
 - All `participant_llm_*` parameters are `str | None = None` throughout the coordinator call chain — the LLM step is skipped entirely when URLs are absent, so all existing 3-participant tests pass unchanged.
 - The LLM adapter catches `LLMCallError` and returns a graceful error summary with empty `source_refs` rather than raising — the orchestration run continues and the coordinator still produces a valid (partial) aggregate.
 - Timing instrumentation (`time.perf_counter()`) is added around each evaluate/execute dispatch step, logged at INFO level via Python `logging` — no schema changes.
+- **Trust model acknowledgment (PR feedback #1):** `participant_llm` sends input queries to external LLM providers BEFORE governance (only responses are governed). This differs from FAP's core "policy before export" principle. To prevent silent ungoverned transmission, the service requires explicit opt-in via `PARTICIPANT_LLM_ENABLE=true` and logs startup warnings. See `fap/apps/participant_llm/README.md` § Trust Model for full details.
+- **Explicit capability requirement (PR feedback #2):** The LLM participant rejects empty capability requests and requests without at least one `llm.*` capability (`llm.query`, `llm.summarize`, `llm.reason`). This prevents automatic participation in all queries by default, ensuring only explicitly LLM-intended queries are sent to external providers.
+- **Coordinator-side dispatch filtering (PR feedback #3):** The coordinator's `/ask` endpoint checks for `llm.*` capabilities before dispatching. If no `llm.*` capability is present, the coordinator passes `None` for LLM URLs to orchestration, preventing any network call to the LLM participant. This provides defense-in-depth alongside participant-side rejection (feedback #2).
 
 ## Test Files
 
@@ -47,6 +50,7 @@ All tests should pass with no real LLM API calls — the LLM adapter is monkeypa
 
 | Env var | Default | Description |
 |---|---|---|
+| `PARTICIPANT_LLM_ENABLE` | _(unset)_ | **REQUIRED.** Set to `true` to acknowledge trust model |
 | `LLM_PROVIDER` | `anthropic` | `anthropic`, `openai`, or `ollama` |
 | `LLM_MODEL` | `claude-sonnet-4-20250514` | Model passed to the API |
 | `LLM_API_KEY` | _(empty)_ | Required for Anthropic / OpenAI |
@@ -54,7 +58,10 @@ All tests should pass with no real LLM API calls — the LLM adapter is monkeypa
 
 For Ollama (no API key needed):
 ```cmd
-set LLM_PROVIDER=ollama
-set LLM_MODEL=llama3.2
+export PARTICIPANT_LLM_ENABLE=true  # Required acknowledgment
+export LLM_PROVIDER=ollama
+export LLM_MODEL=llama3.2
 make demo-llm
 ```
+
+**Note:** `PARTICIPANT_LLM_ENABLE=true` is required for the service to start. Without it, the service exits with a trust model warning.

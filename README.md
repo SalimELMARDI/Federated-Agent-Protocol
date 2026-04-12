@@ -21,7 +21,7 @@ That directory contains:
 - `fap_client`
 - `fap_mcp`
 - the DB-first coordinator reference runtime
-- the `participant_docs`, `participant_kb`, and `participant_logs` reference participants
+- the `participant_docs`, `participant_kb`, `participant_logs`, and `participant_llm` reference participants
 - the demo scenario
 - the protocol spec
 - release notes and checklist

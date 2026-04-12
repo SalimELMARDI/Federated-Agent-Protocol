@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 from fap_core import message_to_dict, parse_inbound_message, to_protocol_http_exception
 from fap_core.messages import TaskCreateMessage
+from participant_llm.adapters.llm_client import LLMCallError
 from participant_llm.service.executor import ParticipantExecutionResult, execute_task_create
 
 router = APIRouter()
@@ -24,7 +25,15 @@ class ExecuteResponse(BaseModel):
 
 @router.post("/execute", response_model=ExecuteResponse)
 async def execute_message(message: dict[str, object] = Body(...)) -> ExecuteResponse:
-    """Execute inbound task-create messages and return governed result messages."""
+    """Execute inbound task-create messages and return governed result messages.
+
+    Returns:
+        ExecuteResponse: Governed execution result on success
+
+    Raises:
+        HTTPException(503): LLM execution failed (upstream provider error)
+        HTTPException(400): Invalid message format or unsupported message type
+    """
     try:
         parsed = parse_inbound_message(message)
     except Exception as exc:
@@ -39,7 +48,20 @@ async def execute_message(message: dict[str, object] = Body(...)) -> ExecuteResp
             },
         )
 
-    result = execute_task_create(parsed)
+    try:
+        result = await execute_task_create(parsed)
+    except LLMCallError as exc:
+        # Return HTTP 503 for upstream LLM failures (protocol-visible failure)
+        # Coordinator will see this as execution failure, not successful completion
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "llm_execution_failed",
+                "message": f"LLM provider call failed: {type(exc).__name__}",
+                "retryable": True,  # Network/auth errors may be transient
+            },
+        ) from exc
+
     return _build_execute_response(result)
 
 

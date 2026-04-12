@@ -64,12 +64,19 @@ def test_accepts_all_three_supported_capabilities_together() -> None:
     assert decision.payload.accepted_capabilities == caps
 
 
-def test_empty_capabilities_returns_full_profile_acceptance() -> None:
-    """An empty capability list should accept and return the full supported profile."""
+def test_empty_capabilities_rejects_to_prevent_auto_participation() -> None:
+    """Empty capability list should REJECT to prevent automatic LLM participation.
+
+    Security constraint: The LLM participant must be explicitly requested via llm.*
+    capabilities. Auto-accepting empty requests would cause this participant to join
+    all queries by default, including sensitive ones not intended for external LLM
+    transmission.
+    """
     decision = evaluate_task_create(_build_task_create([]))
 
-    assert isinstance(decision, TaskAcceptMessage)
-    assert set(decision.payload.accepted_capabilities) == set(SUPPORTED_CAPABILITIES)
+    assert isinstance(decision, TaskRejectMessage)
+    assert decision.payload.retryable is False
+    assert "llm.*" in decision.payload.reason.lower() or "explicit" in decision.payload.reason.lower()
 
 
 def test_supported_capabilities_set_contains_expected_entries() -> None:
@@ -84,32 +91,34 @@ def test_supported_capabilities_set_contains_expected_entries() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_rejects_single_unsupported_capability() -> None:
-    """One unsupported capability should produce a non-retryable reject."""
+def test_rejects_single_unsupported_capability_without_llm_capability() -> None:
+    """Non-LLM capability alone should reject (requires explicit llm.* capability)."""
     decision = evaluate_task_create(_build_task_create(["docs.search"]))
 
     assert isinstance(decision, TaskRejectMessage)
     assert decision.payload.retryable is False
-    assert "docs.search" in decision.payload.reason
+    # Should reject because no llm.* capability present (earlier check)
+    assert "llm." in decision.payload.reason.lower()
 
 
-def test_rejects_mix_of_supported_and_unsupported_capabilities() -> None:
-    """A mix must reject — the unsupported capability name must appear in the reason."""
+def test_accepts_and_ignores_non_llm_capabilities() -> None:
+    """Non-LLM capabilities (e.g. kb.lookup) should be ignored if at least one llm.* capability is present."""
     decision = evaluate_task_create(_build_task_create(["llm.query", "kb.lookup"]))
 
-    assert isinstance(decision, TaskRejectMessage)
-    assert "kb.lookup" in decision.payload.reason
+    assert isinstance(decision, TaskAcceptMessage)
+    # kb.lookup should be stripped from the accepted list
+    assert decision.payload.accepted_capabilities == ["llm.query"]
 
 
-def test_rejects_and_names_all_unsupported_capabilities_in_reason() -> None:
-    """Multiple unsupported capabilities must all appear in the reject reason."""
+def test_rejects_and_names_all_unsupported_llm_capabilities_in_reason() -> None:
+    """Multiple unsupported llm.* capabilities must all appear in the reject reason."""
     decision = evaluate_task_create(
-        _build_task_create(["llm.query", "docs.search", "logs.tail"])
+        _build_task_create(["llm.query", "llm.unknown", "llm.invalid"])
     )
 
     assert isinstance(decision, TaskRejectMessage)
-    assert "docs.search" in decision.payload.reason
-    assert "logs.tail" in decision.payload.reason
+    assert "llm.unknown" in decision.payload.reason
+    assert "llm.invalid" in decision.payload.reason
 
 
 # ---------------------------------------------------------------------------

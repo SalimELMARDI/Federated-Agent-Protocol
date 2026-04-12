@@ -69,11 +69,23 @@ async def run_agent_request_summary_merge(
     participant_llm_execute_url: str | None = None,
     participant_llm_transport: httpx.AsyncBaseTransport | None = None,
 ) -> AgentRunResult:
-    """Convert a plain request into a canonical task-create and run orchestration."""
+    """Convert a plain request into a canonical task-create and run orchestration.
+
+    Security: participant_llm is only dispatched if the request explicitly includes
+    at least one llm.* capability. This prevents automatic LLM participation in
+    queries not intended for external transmission.
+    """
     task_create_message = _build_task_create_message(request)
     snapshot = store.record_task_create(task_create_message)
     if isinstance(store, InMemoryRunStore):
         persistence_service.persist_messages_and_snapshot([task_create_message], snapshot=snapshot)
+
+    # Security: Only dispatch to LLM if explicit llm.* capability requested
+    # This provides coordinator-side defense-in-depth (participant-side also rejects)
+    has_llm_capability = any(cap.startswith("llm.") for cap in request.requested_capabilities)
+    effective_llm_evaluate_url = participant_llm_evaluate_url if has_llm_capability else None
+    effective_llm_execute_url = participant_llm_execute_url if has_llm_capability else None
+    effective_llm_transport = participant_llm_transport if has_llm_capability else None
 
     orchestration = await orchestrate_run_summary_merge(
         task_create_message.envelope.run_id,
@@ -88,9 +100,9 @@ async def run_agent_request_summary_merge(
         participant_logs_evaluate_url=participant_logs_evaluate_url,
         participant_logs_execute_url=participant_logs_execute_url,
         participant_logs_transport=participant_logs_transport,
-        participant_llm_evaluate_url=participant_llm_evaluate_url,
-        participant_llm_execute_url=participant_llm_execute_url,
-        participant_llm_transport=participant_llm_transport,
+        participant_llm_evaluate_url=effective_llm_evaluate_url,
+        participant_llm_execute_url=effective_llm_execute_url,
+        participant_llm_transport=effective_llm_transport,
     )
 
     return AgentRunResult(
