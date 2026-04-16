@@ -52,7 +52,7 @@ curl http://localhost:8014/health
 
 ```bash
 docker-compose exec coordinator python examples/demo_scenario/run_demo.py \
-  --coordinator-url http://localhost:8011
+  --coordinator-url http://coordinator:8000
 ```
 
 Or directly from your host machine (requires Python 3.12 + local install):
@@ -125,10 +125,7 @@ docker-compose run --rm coordinator python -m ruff check .
 
 The docker-compose.yml uses sensible defaults. For customization:
 
-1. Create a `.env` file in the `fap/` directory:
-   ```bash
-   cp docker.env .env
-   ```
+1. Create a `.env` file in the `fap/` directory.
 
 2. Edit `.env` with your values:
    ```

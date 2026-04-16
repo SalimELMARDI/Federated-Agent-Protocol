@@ -39,4 +39,4 @@ RUN useradd -m -u 1000 fapuser && chown -R fapuser:fapuser /app
 USER fapuser
 
 # Default command (can be overridden)
-CMD ["uvicorn", "coordinator_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "coordinator_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

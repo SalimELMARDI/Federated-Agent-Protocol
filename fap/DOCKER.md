@@ -26,9 +26,9 @@ docker-compose ps
 # 4. Verify coordinator is ready
 curl http://localhost:8011/health
 
-# 5. Run the demo
+# 5. Run the demo from inside the coordinator container
 docker-compose exec coordinator python examples/demo_scenario/run_demo.py \
-  --coordinator-url http://localhost:8011
+  --coordinator-url http://coordinator:8000
 
 # Expected Demo Output:
 # Task created: 202 Accepted ✓
@@ -77,7 +77,7 @@ curl http://localhost:8014/health
 ### 3. Run the complete demo scenario
 ```bash
 docker-compose exec coordinator python examples/demo_scenario/run_demo.py \
-  --coordinator-url http://localhost:8011
+  --coordinator-url http://coordinator:8000
 ```
 
 This tests:
@@ -129,7 +129,7 @@ docker-compose down -v
 docker-compose run --rm coordinator python -m pytest
 
 # Or specific test file
-docker-compose run --rm coordinator python -m pytest tests/test_coordinator_api.py
+docker-compose run --rm coordinator python -m pytest tests/test_coordinator_ask_api.py
 ```
 
 ### Type checking
