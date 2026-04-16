@@ -9,6 +9,7 @@ from coordinator_api.api.dispatch import router as dispatch_router
 from coordinator_api.api.health import router as health_router
 from coordinator_api.api.messages import router as messages_router
 from coordinator_api.api.orchestrate import router as orchestrate_router
+from coordinator_api.api.participants import router as participants_router
 from coordinator_api.api.runs import router as runs_router
 from coordinator_api.db import create_session_factory, create_sqlalchemy_engine, init_db
 from coordinator_api.service.dispatch import build_trusted_participant_registry
@@ -70,6 +71,7 @@ def create_app(
     app.include_router(health_router)
     app.include_router(ask_router)
     app.include_router(messages_router)
+    app.include_router(participants_router)
     app.include_router(runs_router)
     app.include_router(dispatch_router)
     app.include_router(aggregate_router)

@@ -13,6 +13,8 @@ This document describes the currently implemented FAP message types in protocol 
 | `fap.policy.attest` | Attest how participant policy was applied | Participant | Active |
 | `fap.aggregate.submit` | Submit a participant-originated governed contribution for aggregation | Participant | Active |
 | `fap.aggregate.result` | Return the canonical coordinator aggregation result | Coordinator | Active |
+| `fap.participant.profile` | Advertise participant capabilities and execution posture | Participant | Active |
+| `fap.participant.status` | Report participant health and current availability | Participant | Active |
 | `fap.exception` | Carry canonical exceptional conditions | Any service | Implemented, limited runtime use |
 
 ## `fap.task.create`
@@ -204,6 +206,71 @@ Currently implemented runtime usage:
 - emitted by `POST /runs/{run_id}/aggregate/summary-merge`
 - emitted as the final result of `POST /runs/{run_id}/orchestrate/summary-merge`
 - returned by the `/ask` wrapper as the final canonical aggregate message
+
+## `fap.participant.profile`
+
+Purpose:
+- advertise participant capabilities
+- describe execution posture for discovery and future routing
+
+Payload fields:
+- `participant_id`
+- `domain_id`
+- `capabilities`
+- `tools`
+- `execution_class`
+- `latency_class`
+- `cost_class`
+- `default_privacy_class`
+- `supports_mcp`
+- `supports_followup`
+- `outbound_network_access`
+- `description`
+
+Key constraints:
+- `participant_id` and `domain_id` must be non-empty
+- `capabilities` and `tools` entries must be non-empty stripped strings
+- execution, latency, and cost use constrained enums
+- `description`, if present, must not be blank after stripping
+
+Currently implemented senders:
+- `participant_docs`
+- `participant_kb`
+- `participant_logs`
+
+Currently implemented runtime usage:
+- returned by `GET /profile` on each built-in participant
+- fetched by `GET /participants/discovery` on the coordinator
+
+## `fap.participant.status`
+
+Purpose:
+- report participant health and whether it is currently accepting work
+
+Payload fields:
+- `participant_id`
+- `domain_id`
+- `health`
+- `accepting_tasks`
+- `load`
+- `available_capabilities`
+- `status_note`
+
+Key constraints:
+- `participant_id` and `domain_id` must be non-empty
+- `health` uses the constrained participant health enum
+- `load` must be non-negative
+- `available_capabilities` entries must be non-empty stripped strings
+- `status_note`, if present, must not be blank after stripping
+
+Currently implemented senders:
+- `participant_docs`
+- `participant_kb`
+- `participant_logs`
+
+Currently implemented runtime usage:
+- returned by `GET /status` on each built-in participant
+- fetched by `GET /participants/discovery` on the coordinator
 
 ## `fap.exception`
 

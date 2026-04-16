@@ -11,6 +11,8 @@ from fap_core.enums import MessageType, ProtocolVersion
 from fap_core.messages.aggregate_result import AggregateResultMessage
 from fap_core.messages.aggregate_submit import AggregateSubmitMessage
 from fap_core.messages.exception import ExceptionMessage
+from fap_core.messages.participant_profile import ParticipantProfileMessage
+from fap_core.messages.participant_status import ParticipantStatusMessage
 from fap_core.messages.policy_attest import PolicyAttestMessage
 from fap_core.messages.task_accept import TaskAcceptMessage
 from fap_core.messages.task_complete import TaskCompleteMessage
@@ -21,6 +23,8 @@ SupportedMessage: TypeAlias = (
     AggregateResultMessage
     | AggregateSubmitMessage
     | ExceptionMessage
+    | ParticipantProfileMessage
+    | ParticipantStatusMessage
     | PolicyAttestMessage
     | TaskAcceptMessage
     | TaskCompleteMessage
@@ -32,6 +36,8 @@ MessageModel: TypeAlias = (
     type[AggregateResultMessage]
     | type[AggregateSubmitMessage]
     | type[ExceptionMessage]
+    | type[ParticipantProfileMessage]
+    | type[ParticipantStatusMessage]
     | type[PolicyAttestMessage]
     | type[TaskAcceptMessage]
     | type[TaskCompleteMessage]
@@ -51,6 +57,8 @@ MESSAGE_MODELS_BY_KIND: Final[Mapping[str, MessageModel]] = MappingProxyType(
         MessageType.FAP_AGGREGATE_SUBMIT: AggregateSubmitMessage,
         MessageType.FAP_AGGREGATE_RESULT: AggregateResultMessage,
         MessageType.FAP_POLICY_ATTEST: PolicyAttestMessage,
+        MessageType.FAP_PARTICIPANT_PROFILE: ParticipantProfileMessage,
+        MessageType.FAP_PARTICIPANT_STATUS: ParticipantStatusMessage,
         MessageType.FAP_EXCEPTION: ExceptionMessage,
     }
 )

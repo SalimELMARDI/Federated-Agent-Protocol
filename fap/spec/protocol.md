@@ -6,6 +6,10 @@ FAP defines the protocol layer for governed federated work across private domain
 
 The current alpha is no longer just a schema reference. It includes a working DB-first coordinator, three real participants, active aggregation, participant-originated `fap.aggregate.submit`, and a thin `/ask` wrapper on top of the core runtime.
 
+The current runtime now also includes canonical participant discovery metadata through
+`fap.participant.profile` and `fap.participant.status`, which is the first concrete step toward
+routable domain agents rather than only opaque connectors.
+
 ## Roles
 
 ### Coordinator
@@ -16,6 +20,7 @@ The coordinator:
 - persists protocol events and latest run snapshots
 - dispatches stored `fap.task.create` runs to trusted participants for evaluation and execution
 - validates participant response identity consistency
+- discovers trusted participant profiles and status over canonical FAP messages
 - aggregates participant-originated submissions into canonical `fap.aggregate.result`
 
 ### Participant
@@ -26,6 +31,7 @@ A participant:
 - evaluates whether it can perform the requested work
 - executes local work inside its own domain
 - applies the shared policy engine
+- advertises profile and status metadata over canonical FAP messages
 - returns governed protocol messages back to the coordinator
 
 Currently implemented participants:
@@ -103,6 +109,7 @@ Currently implemented in v0.1 alpha:
 - one-shot orchestration
 - `/ask` wrapper on top of orchestration
 - trusted participant identity consistency checks
+- canonical participant discovery messages and coordinator discovery endpoint
 
 Not yet implemented in v0.1 alpha:
 
@@ -118,4 +125,5 @@ Not yet implemented in v0.1 alpha:
 ## Scope Boundaries
 
 - MCP is participant-local capability and data access, not a wire-level FAP message family.
+- The intended direction is MCP-inside-participants and FAP-between-domain-agents.
 - A2A is not part of FAP v0.1 alpha.

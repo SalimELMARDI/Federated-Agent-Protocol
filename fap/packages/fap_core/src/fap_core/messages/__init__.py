@@ -4,6 +4,8 @@ from fap_core.messages.aggregate_result import AggregateResultMessage, Aggregate
 from fap_core.messages.aggregate_submit import AggregateSubmitMessage, AggregateSubmitPayload
 from fap_core.messages.envelope import GovernanceMetadata, MessageEnvelope
 from fap_core.messages.exception import ExceptionMessage, ExceptionPayload
+from fap_core.messages.participant_profile import ParticipantProfileMessage, ParticipantProfilePayload
+from fap_core.messages.participant_status import ParticipantStatusMessage, ParticipantStatusPayload
 from fap_core.messages.policy_attest import PolicyAttestMessage, PolicyAttestPayload
 from fap_core.messages.registry import (
     MESSAGE_MODELS_BY_DISPATCH_KEY,
@@ -37,6 +39,10 @@ __all__ = [
     "MessageEnvelope",
     "MessageModel",
     "MessageParseError",
+    "ParticipantProfileMessage",
+    "ParticipantProfilePayload",
+    "ParticipantStatusMessage",
+    "ParticipantStatusPayload",
     "PolicyAttestMessage",
     "PolicyAttestPayload",
     "SupportedMessage",

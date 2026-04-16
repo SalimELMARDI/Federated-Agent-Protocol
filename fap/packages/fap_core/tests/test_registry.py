@@ -11,6 +11,10 @@ from fap_core.enums import (
     AggregateContributionType,
     AggregationMode,
     MessageType,
+    ParticipantCostClass,
+    ParticipantExecutionClass,
+    ParticipantHealth,
+    ParticipantLatencyClass,
     PolicyTransformType,
     PrivacyClass,
     ProtocolVersion,
@@ -28,6 +32,10 @@ from fap_core.messages import (
     MESSAGE_MODELS_BY_KIND,
     MessageEnvelope,
     MessageParseError,
+    ParticipantProfileMessage,
+    ParticipantProfilePayload,
+    ParticipantStatusMessage,
+    ParticipantStatusPayload,
     PolicyAttestMessage,
     PolicyAttestPayload,
     UnsupportedProtocolVersionError,
@@ -186,6 +194,51 @@ def build_policy_attest_raw() -> dict[str, Any]:
     ).model_dump(mode="json")
 
 
+def build_participant_profile_raw() -> dict[str, Any]:
+    """Return a raw participant profile message for parser tests."""
+    return ParticipantProfileMessage(
+        envelope=build_envelope(
+            MessageType.FAP_PARTICIPANT_PROFILE,
+            sender_id="participant_docs",
+            recipient_id="coordinator",
+        ),
+        payload=ParticipantProfilePayload(
+            participant_id="participant_docs",
+            domain_id="participant_docs",
+            capabilities=["docs.search", "docs.summarize"],
+            tools=["local_docs.search"],
+            execution_class=ParticipantExecutionClass.LOCAL,
+            latency_class=ParticipantLatencyClass.INTERACTIVE,
+            cost_class=ParticipantCostClass.LOW,
+            default_privacy_class=PrivacyClass.INTERNAL,
+            supports_mcp=False,
+            supports_followup=False,
+            outbound_network_access=False,
+            description="Local document search participant.",
+        ),
+    ).model_dump(mode="json")
+
+
+def build_participant_status_raw() -> dict[str, Any]:
+    """Return a raw participant status message for parser tests."""
+    return ParticipantStatusMessage(
+        envelope=build_envelope(
+            MessageType.FAP_PARTICIPANT_STATUS,
+            sender_id="participant_docs",
+            recipient_id="coordinator",
+        ),
+        payload=ParticipantStatusPayload(
+            participant_id="participant_docs",
+            domain_id="participant_docs",
+            health=ParticipantHealth.OK,
+            accepting_tasks=True,
+            load=0,
+            available_capabilities=["docs.search", "docs.summarize"],
+            status_note="Ready for interactive queries.",
+        ),
+    ).model_dump(mode="json")
+
+
 def build_exception_raw() -> dict[str, Any]:
     """Return a raw exception message for parser tests."""
     return ExceptionMessage(
@@ -213,6 +266,16 @@ def build_exception_raw() -> dict[str, Any]:
         (build_aggregate_submit_raw, AggregateSubmitMessage, MessageType.FAP_AGGREGATE_SUBMIT),
         (build_aggregate_result_raw, AggregateResultMessage, MessageType.FAP_AGGREGATE_RESULT),
         (build_policy_attest_raw, PolicyAttestMessage, MessageType.FAP_POLICY_ATTEST),
+        (
+            build_participant_profile_raw,
+            ParticipantProfileMessage,
+            MessageType.FAP_PARTICIPANT_PROFILE,
+        ),
+        (
+            build_participant_status_raw,
+            ParticipantStatusMessage,
+            MessageType.FAP_PARTICIPANT_STATUS,
+        ),
         (build_exception_raw, ExceptionMessage, MessageType.FAP_EXCEPTION),
     ],
 )
@@ -241,6 +304,8 @@ def test_get_message_model_returns_registered_model() -> None:
         MessageType.FAP_AGGREGATE_SUBMIT,
         MessageType.FAP_AGGREGATE_RESULT,
         MessageType.FAP_POLICY_ATTEST,
+        MessageType.FAP_PARTICIPANT_PROFILE,
+        MessageType.FAP_PARTICIPANT_STATUS,
         MessageType.FAP_EXCEPTION,
     }
 

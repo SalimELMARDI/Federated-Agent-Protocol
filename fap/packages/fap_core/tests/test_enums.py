@@ -4,7 +4,11 @@ from fap_core.enums import (
     AggregateContributionType,
     AggregationMode,
     MessageType,
+    ParticipantCostClass,
     ParticipantDecision,
+    ParticipantExecutionClass,
+    ParticipantHealth,
+    ParticipantLatencyClass,
     PolicyTransformType,
     PrivacyClass,
     ProtocolVersion,
@@ -29,6 +33,8 @@ def test_message_type_values() -> None:
         "FAP_AGGREGATE_SUBMIT": "fap.aggregate.submit",
         "FAP_AGGREGATE_RESULT": "fap.aggregate.result",
         "FAP_POLICY_ATTEST": "fap.policy.attest",
+        "FAP_PARTICIPANT_PROFILE": "fap.participant.profile",
+        "FAP_PARTICIPANT_STATUS": "fap.participant.status",
         "FAP_EXCEPTION": "fap.exception",
     }
 
@@ -84,4 +90,27 @@ def test_participant_decision_values() -> None:
         "ACCEPT": "accept",
         "REJECT": "reject",
         "ACCEPT_WITH_CONSTRAINTS": "accept_with_constraints",
+    }
+
+
+def test_participant_discovery_enums_values() -> None:
+    """Participant discovery enums should match the expected wire values."""
+    assert {item.name: item.value for item in ParticipantExecutionClass} == {
+        "LOCAL": "local",
+        "OUTBOUND": "outbound",
+        "HYBRID": "hybrid",
+    }
+    assert {item.name: item.value for item in ParticipantLatencyClass} == {
+        "INTERACTIVE": "interactive",
+        "BACKGROUND": "background",
+    }
+    assert {item.name: item.value for item in ParticipantCostClass} == {
+        "LOW": "low",
+        "MEDIUM": "medium",
+        "HIGH": "high",
+    }
+    assert {item.name: item.value for item in ParticipantHealth} == {
+        "OK": "ok",
+        "DEGRADED": "degraded",
+        "OFFLINE": "offline",
     }

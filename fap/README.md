@@ -26,6 +26,7 @@ FAP defines the message layer and reference runtime for:
 
 - coordinator-managed federated task creation
 - participant evaluation and governed execution
+- participant discovery through canonical profile/status metadata
 - participant-originated aggregation input
 - coordinator aggregation over governed contributions
 - durable run/event inspection
@@ -41,6 +42,7 @@ In the current alpha, the working runtime includes:
   - `participant_logs`
   - `participant_llm`
 - participant-originated `fap.aggregate.submit`
+- canonical `fap.participant.profile` and `fap.participant.status`
 - `summary_merge` aggregation
 - source-level evidence refs carried through execution and aggregation payloads
 - a thin `/ask` wrapper
@@ -181,6 +183,7 @@ If you do not use `make`, use the exact local commands documented in [examples/d
 The demo shows:
 
 - canonical `fap.task.create`
+- canonical participant discovery through `GET /participants/discovery`
 - one-shot orchestration across docs, kb, and logs
 - governed execution
 - participant-originated `fap.aggregate.submit`
@@ -253,6 +256,7 @@ Example server startup is documented in [examples/mcp_integration](examples/mcp_
 - protocol overview: [spec/protocol.md](spec/protocol.md)
 - envelope and version-aware dispatch: [spec/envelope.md](spec/envelope.md)
 - message family: [spec/message-family.md](spec/message-family.md)
+- v0.2 domain-agent direction: [spec/v0.2-domain-agents-roadmap.md](spec/v0.2-domain-agents-roadmap.md)
 - trust and identity posture: [spec/identity-and-trust.md](spec/identity-and-trust.md)
 - coordinator state model: [spec/state-model.md](spec/state-model.md)
 - demo scenario: [examples/demo_scenario/README.md](examples/demo_scenario/README.md)

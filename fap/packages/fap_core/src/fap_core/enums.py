@@ -19,6 +19,8 @@ class MessageType(StrEnum):
     FAP_AGGREGATE_SUBMIT = "fap.aggregate.submit"
     FAP_AGGREGATE_RESULT = "fap.aggregate.result"
     FAP_POLICY_ATTEST = "fap.policy.attest"
+    FAP_PARTICIPANT_PROFILE = "fap.participant.profile"
+    FAP_PARTICIPANT_STATUS = "fap.participant.status"
     FAP_EXCEPTION = "fap.exception"
 
 
@@ -82,3 +84,34 @@ class ParticipantDecision(StrEnum):
     ACCEPT = "accept"
     REJECT = "reject"
     ACCEPT_WITH_CONSTRAINTS = "accept_with_constraints"
+
+
+class ParticipantExecutionClass(StrEnum):
+    """How a participant executes its work relative to local boundaries."""
+
+    LOCAL = "local"
+    OUTBOUND = "outbound"
+    HYBRID = "hybrid"
+
+
+class ParticipantLatencyClass(StrEnum):
+    """High-level latency posture for a participant."""
+
+    INTERACTIVE = "interactive"
+    BACKGROUND = "background"
+
+
+class ParticipantCostClass(StrEnum):
+    """High-level relative cost posture for a participant."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class ParticipantHealth(StrEnum):
+    """High-level participant availability/health state."""
+
+    OK = "ok"
+    DEGRADED = "degraded"
+    OFFLINE = "offline"

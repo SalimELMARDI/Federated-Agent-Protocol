@@ -37,6 +37,8 @@ These docs describe what is actually implemented now. Where behavior is implemen
   Deterministic policy rules currently implemented in the shared policy engine.
 - `state-model.md`
   DB-first coordinator run state, status transitions, and durable snapshot behavior.
+- `v0.2-domain-agents-roadmap.md`
+  Forward-looking roadmap for routable domain agents, MCP-inside-participants, and richer routing.
 - `examples/`
   Canonical example JSON payloads aligned with the current runtime.
 
@@ -50,6 +52,8 @@ These docs describe what is actually implemented now. Where behavior is implemen
 - `fap.aggregate.submit`
 - `fap.aggregate.result`
 - `fap.exception`
+- `fap.participant.profile`
+- `fap.participant.status`
 - canonical codec and shared parsing helpers
 - explicit dispatch over `(protocol, version, message_type)`
 - supported protocol version `0.1`
@@ -62,6 +66,7 @@ These docs describe what is actually implemented now. Where behavior is implemen
   - `participant_logs`
 - coordinator-side sender/domain/recipient consistency validation on participant dispatch responses
 - source-level evidence refs in execution and aggregation payloads
+- participant discovery endpoints and canonical participant profile/status messages
 
 ## Release Hardening In This Spec Revision
 
