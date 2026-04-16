@@ -27,6 +27,9 @@ def create_app(
     participant_logs_evaluate_url: str = "http://participant-logs/evaluate",
     participant_logs_execute_url: str = "http://participant-logs/execute",
     participant_logs_transport: httpx.AsyncBaseTransport | None = None,
+    participant_llm_evaluate_url: str | None = None,
+    participant_llm_execute_url: str | None = None,
+    participant_llm_transport: httpx.AsyncBaseTransport | None = None,
     database_url: str | None = None,
     persistence_service: PersistenceService | None = None,
 ) -> FastAPI:
@@ -41,6 +44,9 @@ def create_app(
     app.state.participant_logs_evaluate_url = participant_logs_evaluate_url
     app.state.participant_logs_execute_url = participant_logs_execute_url
     app.state.participant_logs_transport = participant_logs_transport
+    app.state.participant_llm_evaluate_url = participant_llm_evaluate_url
+    app.state.participant_llm_execute_url = participant_llm_execute_url
+    app.state.participant_llm_transport = participant_llm_transport
     app.state.trusted_participants = build_trusted_participant_registry(
         participant_docs_evaluate_url=participant_docs_evaluate_url,
         participant_docs_execute_url=participant_docs_execute_url,
@@ -51,6 +57,9 @@ def create_app(
         participant_logs_evaluate_url=participant_logs_evaluate_url,
         participant_logs_execute_url=participant_logs_execute_url,
         participant_logs_transport=participant_logs_transport,
+        participant_llm_evaluate_url=participant_llm_evaluate_url,
+        participant_llm_execute_url=participant_llm_execute_url,
+        participant_llm_transport=participant_llm_transport,
     )
     if persistence_service is None:
         engine = create_sqlalchemy_engine(database_url)

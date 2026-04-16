@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
 
 import httpx
@@ -18,6 +19,11 @@ from fap_core.messages import SupportedMessage, TaskCreateMessage
 from participant_docs.main import create_app as create_participant_docs_app
 from participant_kb.main import create_app as create_participant_kb_app
 from participant_logs.main import create_app as create_participant_logs_app
+
+# Enable participant_llm for tests (bypass trust model check)
+os.environ["PARTICIPANT_LLM_ENABLE"] = "true"
+
+from participant_llm.main import create_app as create_participant_llm_app
 
 
 class RecordingPersistenceService:
@@ -63,7 +69,10 @@ async def test_agent_request_runs_full_three_participant_orchestration() -> None
     persistence = RecordingPersistenceService()
 
     result = await run_agent_request_summary_merge(
-        AgentAskRequest(query="privacy"),
+        AgentAskRequest(
+            query="privacy",
+            requested_capabilities=["docs.search", "kb.lookup", "logs.summarize"]
+        ),
         store=store,
         persistence_service=persistence,
         participant_docs_evaluate_url="http://participant-docs/evaluate",
@@ -153,7 +162,10 @@ async def test_agent_request_surfaces_participant_failures_cleanly() -> None:
         match="participant_docs evaluation failed with status 503",
     ):
         await run_agent_request_summary_merge(
-            AgentAskRequest(query="privacy"),
+            AgentAskRequest(
+                query="privacy",
+                requested_capabilities=["docs.search", "kb.lookup", "logs.summarize"]
+            ),
             store=store,
             persistence_service=persistence,
             participant_docs_evaluate_url="http://participant-docs/evaluate",
@@ -168,3 +180,113 @@ async def test_agent_request_surfaces_participant_failures_cleanly() -> None:
         )
 
     assert persistence.recorded_batches == [["fap.task.create"]]
+
+
+@pytest.mark.anyio
+async def test_agent_request_skips_llm_when_no_llm_capability_requested() -> None:
+    """Empty capabilities should NOT dispatch to LLM participant (coordinator-side filter)."""
+    store = InMemoryRunStore()
+    persistence = RecordingPersistenceService()
+
+    # Monkeypatch LLM adapter to track if it was called
+    llm_called = []
+
+    def stub_call_llm(query: str) -> object:
+        llm_called.append(query)
+        raise RuntimeError("LLM should not be called when no llm.* capability requested")
+
+    import participant_llm.service.executor
+
+    original_call_llm = participant_llm.service.executor.call_llm
+    participant_llm.service.executor.call_llm = stub_call_llm  # type: ignore
+
+    try:
+        result = await run_agent_request_summary_merge(
+            AgentAskRequest(query="privacy", requested_capabilities=[]),  # Empty capabilities
+            store=store,
+            persistence_service=persistence,
+            participant_docs_evaluate_url="http://participant-docs/evaluate",
+            participant_docs_execute_url="http://participant-docs/execute",
+            participant_docs_transport=httpx.ASGITransport(app=create_participant_docs_app()),
+            participant_kb_evaluate_url="http://participant-kb/evaluate",
+            participant_kb_execute_url="http://participant-kb/execute",
+            participant_kb_transport=httpx.ASGITransport(app=create_participant_kb_app()),
+            participant_logs_evaluate_url="http://participant-logs/evaluate",
+            participant_logs_execute_url="http://participant-logs/execute",
+            participant_logs_transport=httpx.ASGITransport(app=create_participant_logs_app()),
+            participant_llm_evaluate_url="http://participant-llm/evaluate",
+            participant_llm_execute_url="http://participant-llm/execute",
+            participant_llm_transport=httpx.ASGITransport(app=create_participant_llm_app()),
+        )
+
+        # LLM participant should NOT appear in evaluations (coordinator skipped dispatch)
+        assert [entry.participant for entry in result.orchestration.evaluations] == [
+            "participant_docs",
+            "participant_kb",
+            "participant_logs",
+        ]
+        assert result.orchestration.aggregate_result.payload.participant_count == 3
+        assert "participant_llm" not in result.orchestration.aggregate_result.payload.final_answer
+
+        # Verify LLM adapter was never called
+        assert len(llm_called) == 0
+    finally:
+        participant_llm.service.executor.call_llm = original_call_llm  # type: ignore
+
+
+@pytest.mark.anyio
+async def test_agent_request_includes_llm_when_llm_capability_requested() -> None:
+    """Explicit llm.query capability should dispatch to LLM participant."""
+    store = InMemoryRunStore()
+    persistence = RecordingPersistenceService()
+
+    # Stub LLM adapter
+    async def stub_call_llm(query: str) -> object:
+        from participant_llm.adapters.llm_client import LLMResponse
+
+        del query
+        return LLMResponse(
+            content="LLM analysis result",
+            model="test-model",
+            endpoint_url="http://test-llm",
+        )
+
+    import participant_llm.service.executor
+
+    original_call_llm = participant_llm.service.executor.call_llm
+    participant_llm.service.executor.call_llm = stub_call_llm  # type: ignore
+
+    try:
+        result = await run_agent_request_summary_merge(
+            AgentAskRequest(
+                query="privacy",
+                requested_capabilities=["docs.search", "kb.lookup", "llm.query", "logs.summarize"]
+            ),
+            store=store,
+            persistence_service=persistence,
+            participant_docs_evaluate_url="http://participant-docs/evaluate",
+            participant_docs_execute_url="http://participant-docs/execute",
+            participant_docs_transport=httpx.ASGITransport(app=create_participant_docs_app()),
+            participant_kb_evaluate_url="http://participant-kb/evaluate",
+            participant_kb_execute_url="http://participant-kb/execute",
+            participant_kb_transport=httpx.ASGITransport(app=create_participant_kb_app()),
+            participant_logs_evaluate_url="http://participant-logs/evaluate",
+            participant_logs_execute_url="http://participant-logs/execute",
+            participant_logs_transport=httpx.ASGITransport(app=create_participant_logs_app()),
+            participant_llm_evaluate_url="http://participant-llm/evaluate",
+            participant_llm_execute_url="http://participant-llm/execute",
+            participant_llm_transport=httpx.ASGITransport(app=create_participant_llm_app()),
+        )
+
+        # LLM participant should appear in evaluations and accept
+        assert [entry.participant for entry in result.orchestration.evaluations] == [
+            "participant_docs",
+            "participant_kb",
+            "participant_logs",
+            "participant_llm",
+        ]
+        assert [entry.accepted for entry in result.orchestration.evaluations] == [True, True, True, True]
+        assert result.orchestration.aggregate_result.payload.participant_count == 4
+        assert "participant_llm" in result.orchestration.aggregate_result.payload.final_answer
+    finally:
+        participant_llm.service.executor.call_llm = original_call_llm  # type: ignore

@@ -20,6 +20,7 @@ class ParticipantId(StrEnum):
     PARTICIPANT_DOCS = "participant_docs"
     PARTICIPANT_KB = "participant_kb"
     PARTICIPANT_LOGS = "participant_logs"
+    PARTICIPANT_LLM = "participant_llm"
 
 
 @dataclass(frozen=True)
@@ -46,6 +47,10 @@ TRUSTED_PARTICIPANT_IDENTITIES: Final[Mapping[ParticipantId, TrustedParticipantI
             ParticipantId.PARTICIPANT_LOGS: TrustedParticipantIdentity(
                 participant_id=ParticipantId.PARTICIPANT_LOGS,
                 domain_id=ParticipantId.PARTICIPANT_LOGS.value,
+            ),
+            ParticipantId.PARTICIPANT_LLM: TrustedParticipantIdentity(
+                participant_id=ParticipantId.PARTICIPANT_LLM,
+                domain_id=ParticipantId.PARTICIPANT_LLM.value,
             ),
         }
     )

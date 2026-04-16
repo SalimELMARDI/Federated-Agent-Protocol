@@ -104,30 +104,39 @@ def build_trusted_participant_registry(
     participant_logs_evaluate_url: str,
     participant_logs_execute_url: str,
     participant_logs_transport: httpx.AsyncBaseTransport | None = None,
+    participant_llm_evaluate_url: str | None = None,
+    participant_llm_execute_url: str | None = None,
+    participant_llm_transport: httpx.AsyncBaseTransport | None = None,
 ) -> TrustedParticipantRegistry:
     """Build the coordinator's central trusted participant registry."""
-    return MappingProxyType(
-        {
-            ParticipantId.PARTICIPANT_DOCS: build_trusted_participant_config(
-                ParticipantId.PARTICIPANT_DOCS,
-                evaluate_url=participant_docs_evaluate_url,
-                execute_url=participant_docs_execute_url,
-                transport=participant_docs_transport,
-            ),
-            ParticipantId.PARTICIPANT_KB: build_trusted_participant_config(
-                ParticipantId.PARTICIPANT_KB,
-                evaluate_url=participant_kb_evaluate_url,
-                execute_url=participant_kb_execute_url,
-                transport=participant_kb_transport,
-            ),
-            ParticipantId.PARTICIPANT_LOGS: build_trusted_participant_config(
-                ParticipantId.PARTICIPANT_LOGS,
-                evaluate_url=participant_logs_evaluate_url,
-                execute_url=participant_logs_execute_url,
-                transport=participant_logs_transport,
-            ),
-        }
-    )
+    registry: dict[ParticipantId, TrustedParticipantConfig] = {
+        ParticipantId.PARTICIPANT_DOCS: build_trusted_participant_config(
+            ParticipantId.PARTICIPANT_DOCS,
+            evaluate_url=participant_docs_evaluate_url,
+            execute_url=participant_docs_execute_url,
+            transport=participant_docs_transport,
+        ),
+        ParticipantId.PARTICIPANT_KB: build_trusted_participant_config(
+            ParticipantId.PARTICIPANT_KB,
+            evaluate_url=participant_kb_evaluate_url,
+            execute_url=participant_kb_execute_url,
+            transport=participant_kb_transport,
+        ),
+        ParticipantId.PARTICIPANT_LOGS: build_trusted_participant_config(
+            ParticipantId.PARTICIPANT_LOGS,
+            evaluate_url=participant_logs_evaluate_url,
+            execute_url=participant_logs_execute_url,
+            transport=participant_logs_transport,
+        ),
+    }
+    if participant_llm_evaluate_url is not None and participant_llm_execute_url is not None:
+        registry[ParticipantId.PARTICIPANT_LLM] = build_trusted_participant_config(
+            ParticipantId.PARTICIPANT_LLM,
+            evaluate_url=participant_llm_evaluate_url,
+            execute_url=participant_llm_execute_url,
+            transport=participant_llm_transport,
+        )
+    return MappingProxyType(registry)
 
 
 async def dispatch_run_to_participant_docs(
@@ -178,6 +187,23 @@ async def dispatch_run_to_participant_logs(
         url=evaluate_url,
         transport=transport,
         participant_id=ParticipantId.PARTICIPANT_LOGS,
+    )
+
+
+async def dispatch_run_to_participant_llm(
+    run_id: str,
+    *,
+    store: CoordinatorStore,
+    evaluate_url: str,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> TaskAcceptMessage | TaskRejectMessage:
+    """Dispatch a stored task-create run to participant_llm and record the returned decision."""
+    return await _dispatch_run_to_participant(
+        run_id,
+        store=store,
+        url=evaluate_url,
+        transport=transport,
+        participant_id=ParticipantId.PARTICIPANT_LLM,
     )
 
 
@@ -289,6 +315,23 @@ async def dispatch_run_to_participant_logs_execute(
         url=execute_url,
         transport=transport,
         participant_id=ParticipantId.PARTICIPANT_LOGS,
+    )
+
+
+async def dispatch_run_to_participant_llm_execute(
+    run_id: str,
+    *,
+    store: CoordinatorStore,
+    execute_url: str,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> ParticipantExecutionDispatchResult:
+    """Dispatch a stored task-create run to participant_llm execution and record the outputs."""
+    return await _dispatch_run_to_participant_execute(
+        run_id,
+        store=store,
+        url=execute_url,
+        transport=transport,
+        participant_id=ParticipantId.PARTICIPANT_LLM,
     )
 
 
@@ -495,4 +538,6 @@ __all__: Final[list[str]] = [
     "dispatch_run_to_participant_kb_execute",
     "dispatch_run_to_participant_logs",
     "dispatch_run_to_participant_logs_execute",
+    "dispatch_run_to_participant_llm",
+    "dispatch_run_to_participant_llm_execute",
 ]

@@ -60,6 +60,15 @@ async def ask(request: Request, payload: AgentAskRequest) -> AskResponse:
             participant_logs_evaluate_url=trusted_participants[ParticipantId.PARTICIPANT_LOGS].evaluate_url,
             participant_logs_execute_url=trusted_participants[ParticipantId.PARTICIPANT_LOGS].execute_url,
             participant_logs_transport=trusted_participants[ParticipantId.PARTICIPANT_LOGS].transport,
+            participant_llm_evaluate_url=trusted_participants[ParticipantId.PARTICIPANT_LLM].evaluate_url
+            if ParticipantId.PARTICIPANT_LLM in trusted_participants
+            else None,
+            participant_llm_execute_url=trusted_participants[ParticipantId.PARTICIPANT_LLM].execute_url
+            if ParticipantId.PARTICIPANT_LLM in trusted_participants
+            else None,
+            participant_llm_transport=trusted_participants[ParticipantId.PARTICIPANT_LLM].transport
+            if ParticipantId.PARTICIPANT_LLM in trusted_participants
+            else None,
         )
     except RunAlreadyExistsError as exc:
         raise HTTPException(
