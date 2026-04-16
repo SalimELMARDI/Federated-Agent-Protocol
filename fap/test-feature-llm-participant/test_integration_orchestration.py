@@ -25,7 +25,10 @@ import pytest
 # Enable participant_llm for tests (bypass trust model check)
 os.environ["PARTICIPANT_LLM_ENABLE"] = "true"
 
-from coordinator_api.service.orchestration import orchestrate_run_summary_merge
+from coordinator_api.service.orchestration import (
+    ParticipantOrchestrationFailedError,
+    orchestrate_run_summary_merge,
+)
 from coordinator_api.service.persistence import PersistedEventSummary
 from coordinator_api.service.state import RunSnapshot
 from coordinator_api.service.store import InMemoryRunStore
@@ -493,3 +496,39 @@ async def test_orchestration_continues_when_llm_execution_fails(
     assert "[participant_logs]" in final_answer
     # LLM should NOT appear in final answer since execution failed
     assert "[participant_llm]" not in final_answer
+
+
+@pytest.mark.anyio
+async def test_llm_only_request_surfaces_execution_failure_instead_of_no_executable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An explicit llm-only request should preserve the real execute failure cause."""
+    store = InMemoryRunStore()
+    persistence = _RecordingPersistence()
+    create_msg = _build_task_create(requested_capabilities=["llm.query"])
+    store.record_task_create(create_msg)
+
+    monkeypatch.setattr("participant_llm.service.executor.call_llm", _stub_call_llm_error)
+    llm_transport = httpx.ASGITransport(app=create_participant_llm_app())
+
+    with pytest.raises(
+        ParticipantOrchestrationFailedError,
+        match="participant_llm execution failed with status 503",
+    ):
+        await orchestrate_run_summary_merge(
+            create_msg.envelope.run_id,
+            store=store,
+            persistence_service=persistence,
+            participant_docs_evaluate_url="http://participant-docs/evaluate",
+            participant_docs_execute_url="http://participant-docs/execute",
+            participant_docs_transport=httpx.ASGITransport(app=create_participant_docs_app()),
+            participant_kb_evaluate_url="http://participant-kb/evaluate",
+            participant_kb_execute_url="http://participant-kb/execute",
+            participant_kb_transport=httpx.ASGITransport(app=create_participant_kb_app()),
+            participant_logs_evaluate_url="http://participant-logs/evaluate",
+            participant_logs_execute_url="http://participant-logs/execute",
+            participant_logs_transport=httpx.ASGITransport(app=create_participant_logs_app()),
+            participant_llm_evaluate_url="http://participant-llm/evaluate",
+            participant_llm_execute_url="http://participant-llm/execute",
+            participant_llm_transport=llm_transport,
+        )

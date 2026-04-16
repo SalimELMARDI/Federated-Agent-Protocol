@@ -110,6 +110,7 @@ async def orchestrate_run_summary_merge(
     run_start = time.perf_counter()
     evaluations: list[ParticipantEvaluationRecord] = []
     executions: list[ParticipantExecutionRecord] = []
+    llm_execution_error: ParticipantOrchestrationFailedError | None = None
 
     t0 = time.perf_counter()
     docs_decision = await _evaluate_participant_docs(
@@ -314,6 +315,7 @@ async def orchestrate_run_summary_merge(
                 # We log the error and continue so that other participants' results
                 # are still aggregated. This handles upstream provider outages gracefully.
                 logger.warning("run_id=%s participant_llm execution failed: %s", run_id, str(exc))
+                llm_execution_error = exc
                 executions.append(
                     ParticipantExecutionRecord(
                         participant="participant_llm",
@@ -328,9 +330,11 @@ async def orchestrate_run_summary_merge(
                     executed=False,
                     message_type="skipped",
                 )
-            )
+                )
 
     if not any_executed:
+        if llm_execution_error is not None:
+            raise llm_execution_error
         raise NoExecutableParticipantsError(run_id)
 
     t0 = time.perf_counter()

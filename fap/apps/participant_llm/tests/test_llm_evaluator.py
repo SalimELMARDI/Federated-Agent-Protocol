@@ -12,7 +12,6 @@ from fap_core.messages import (
     TaskCreatePayload,
     TaskRejectMessage,
 )
-from participant_llm.service.capabilities import SUPPORTED_CAPABILITIES
 from participant_llm.service.evaluator import evaluate_task_create
 
 

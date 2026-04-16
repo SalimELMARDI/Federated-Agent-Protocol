@@ -49,6 +49,16 @@ def test_accepts_when_all_requested_capabilities_are_supported() -> None:
     assert decision.payload.accepted_capabilities == ["docs.lookup", "docs.summarize"]
 
 
+def test_accepts_only_docs_capabilities_from_mixed_requests() -> None:
+    """Mixed-domain capability requests should only echo docs-supported capabilities."""
+    inbound = build_task_create_message(["docs.lookup", "llm.query"])
+
+    decision = evaluate_task_create(inbound)
+
+    assert isinstance(decision, TaskAcceptMessage)
+    assert decision.payload.accepted_capabilities == ["docs.lookup"]
+
+
 def test_accepts_when_requested_capabilities_is_empty() -> None:
     """Empty requested capabilities should yield full-profile acceptance."""
     inbound = build_task_create_message([])

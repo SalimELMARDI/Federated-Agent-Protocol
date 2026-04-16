@@ -84,10 +84,16 @@ def evaluate_task_create(message: TaskCreateMessage) -> TaskAcceptMessage | Task
             ),
         )
 
+    accepted_capabilities = [
+        capability
+        for capability in requested_capabilities
+        if capability.startswith("docs.") and capability in supported_capabilities
+    ]
+
     return TaskAcceptMessage(
         envelope=_build_response_envelope(message, message_type=MessageType.FAP_TASK_ACCEPT),
         payload=TaskAcceptPayload(
             participant_id=PARTICIPANT_ID,
-            accepted_capabilities=list(requested_capabilities),
+            accepted_capabilities=accepted_capabilities,
         ),
     )

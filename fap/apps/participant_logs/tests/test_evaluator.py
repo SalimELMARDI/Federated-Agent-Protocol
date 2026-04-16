@@ -49,6 +49,16 @@ def test_accepts_when_all_requested_capabilities_are_supported() -> None:
     assert decision.payload.accepted_capabilities == ["logs.search", "logs.summarize"]
 
 
+def test_accepts_only_logs_capabilities_from_mixed_requests() -> None:
+    """Mixed-domain capability requests should only echo logs-supported capabilities."""
+    decision = evaluate_task_create(
+        build_task_create_message(["logs.search", "llm.query"])
+    )
+
+    assert isinstance(decision, TaskAcceptMessage)
+    assert decision.payload.accepted_capabilities == ["logs.search"]
+
+
 def test_accepts_when_requested_capabilities_is_empty() -> None:
     """Empty requested capabilities should yield full-profile acceptance."""
     decision = evaluate_task_create(build_task_create_message([]))

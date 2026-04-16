@@ -25,7 +25,7 @@ from fap_core.messages import (
     TaskCreateMessage,
 )
 from fap_core.policy import LocalResult, PolicyEnvelopeContext, apply_policy
-from participant_llm.adapters.llm_client import LLMCallError, LLMResponse, call_llm
+from participant_llm.adapters.llm_client import LLMResponse, call_llm
 
 PARTICIPANT_ID = "participant_llm"
 DOMAIN_ID = "participant_llm"
