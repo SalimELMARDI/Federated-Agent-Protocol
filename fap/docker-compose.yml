@@ -1,0 +1,129 @@
+services:
+  # PostgreSQL database for coordinator
+  postgres:
+    image: postgres:16-alpine
+    container_name: fap-postgres
+    environment:
+      POSTGRES_USER: fapuser
+      POSTGRES_PASSWORD: fappassword
+      POSTGRES_DB: fap_coordinator
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fapuser -d fap_coordinator"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fap-network
+
+  # Coordinator API service
+  coordinator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fap-coordinator
+    environment:
+      DATABASE_URL: postgresql://fapuser:fappassword@postgres:5432/fap_coordinator
+      PARTICIPANT_DOCS_EVALUATE_URL: http://participant-docs:8000/evaluate
+      PARTICIPANT_DOCS_EXECUTE_URL: http://participant-docs:8000/execute
+      PARTICIPANT_KB_EVALUATE_URL: http://participant-kb:8000/evaluate
+      PARTICIPANT_KB_EXECUTE_URL: http://participant-kb:8000/execute
+      PARTICIPANT_LOGS_EVALUATE_URL: http://participant-logs:8000/evaluate
+      PARTICIPANT_LOGS_EXECUTE_URL: http://participant-logs:8000/execute
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "8011:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/app/migrations:ro
+      - ./scripts/entrypoint-coordinator.sh:/app/entrypoint.sh:ro
+    entrypoint: /app/entrypoint.sh
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - fap-network
+
+  # Participant Docs service
+  participant-docs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fap-participant-docs
+    environment:
+      PARTICIPANT_DOCS_PATH: examples/local_docs/data
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "8012:8000"
+    volumes:
+      - ./examples/local_docs/data:/app/examples/local_docs/data:ro
+    command: python -m uvicorn participant_docs.main:app --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - fap-network
+
+  # Participant KB service
+  participant-kb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fap-participant-kb
+    environment:
+      PARTICIPANT_KB_PATH: examples/local_kb/data
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "8013:8000"
+    volumes:
+      - ./examples/local_kb/data:/app/examples/local_kb/data:ro
+    command: python -m uvicorn participant_kb.main:app --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - fap-network
+
+  # Participant Logs service
+  participant-logs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fap-participant-logs
+    environment:
+      PARTICIPANT_LOGS_PATH: examples/local_logs/data
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "8014:8000"
+    volumes:
+      - ./examples/local_logs/data:/app/examples/local_logs/data:ro
+    command: python -m uvicorn participant_logs.main:app --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - fap-network
+
+volumes:
+  postgres_data:
+
+networks:
+  fap-network:
+    driver: bridge
