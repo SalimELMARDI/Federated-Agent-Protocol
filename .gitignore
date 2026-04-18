@@ -17,8 +17,7 @@ fap/.mypy_cache/
 fap/.ruff_cache/
 fap/fap.egg-info/
 fap/fap_coordinator.db
-fap/migrations/
+fap/docs/blog_assets/
 
 # CI / local assistant config
-.github/
 .claude/

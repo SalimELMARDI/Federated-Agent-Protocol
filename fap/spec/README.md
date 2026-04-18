@@ -8,10 +8,11 @@ FAP is a protocol-first approach for coordinating governed multi-participant wor
 - canonical message models and a shared envelope
 - version-aware parsing and dispatch for protocol `FAP` version `0.1`
 - a DB-first coordinator runtime with durable protocol events and run snapshots
-- three real reference participants:
+- four runtime participants:
   - `participant_docs`
   - `participant_kb`
   - `participant_logs`
+  - `participant_llm` (optional outbound participant with explicit opt-in)
 - governed participant execution with canonical `task_complete`, `policy_attest`, and participant-originated `aggregate_submit`
 - coordinator-managed `aggregate_result`
 - structured local `source_refs` carried through execution and aggregation payloads
@@ -37,8 +38,12 @@ These docs describe what is actually implemented now. Where behavior is implemen
   Deterministic policy rules currently implemented in the shared policy engine.
 - `state-model.md`
   DB-first coordinator run state, status transitions, and durable snapshot behavior.
+- `current-state-report.md`
+  Detailed assessment of the current protocol/runtime state, strengths, gaps, and risks.
 - `v0.2-domain-agents-roadmap.md`
   Forward-looking roadmap for routable domain agents, MCP-inside-participants, and richer routing.
+- `v0.2-plan.md`
+  Detailed technical plan for moving from the current alpha toward a stronger v0.2 protocol/runtime.
 - `examples/`
   Canonical example JSON payloads aligned with the current runtime.
 
@@ -64,6 +69,7 @@ These docs describe what is actually implemented now. Where behavior is implemen
   - `participant_docs`
   - `participant_kb`
   - `participant_logs`
+- optional `participant_llm` integration in the coordinator runtime when configured
 - coordinator-side sender/domain/recipient consistency validation on participant dispatch responses
 - source-level evidence refs in execution and aggregation payloads
 - participant discovery endpoints and canonical participant profile/status messages

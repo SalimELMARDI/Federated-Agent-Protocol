@@ -18,6 +18,12 @@ from fap_core.enums import (
 from fap_core.messages import ParticipantProfileMessage, ParticipantStatusMessage
 from participant_docs.main import create_app as create_participant_docs_app
 from participant_kb.main import create_app as create_participant_kb_app
+from participant_llm.config import (
+    LLM_MODEL_ENV_VAR,
+    LLM_PROVIDER_ENV_VAR,
+    PARTICIPANT_LLM_ENABLE_ENV_VAR,
+)
+from participant_llm.main import create_app as create_participant_llm_app
 from participant_logs.main import create_app as create_participant_logs_app
 
 
@@ -89,3 +95,49 @@ def test_status_endpoint_returns_canonical_status_message(
         capability.startswith(capability_prefix)
         for capability in parsed.payload.available_capabilities
     )
+
+
+def test_participant_llm_profile_endpoint_returns_outbound_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """participant_llm should advertise its outbound execution posture canonically."""
+    monkeypatch.setenv(PARTICIPANT_LLM_ENABLE_ENV_VAR, "true")
+    monkeypatch.setenv(LLM_PROVIDER_ENV_VAR, "anthropic")
+    monkeypatch.setenv(LLM_MODEL_ENV_VAR, "test-llm-model")
+
+    with TestClient(create_participant_llm_app()) as client:
+        response = client.get("/profile")
+
+    assert response.status_code == 200
+    parsed = message_from_dict(response.json())
+    assert isinstance(parsed, ParticipantProfileMessage)
+    assert parsed.envelope.message_type == MessageType.FAP_PARTICIPANT_PROFILE
+    assert parsed.envelope.sender_id == "participant_llm"
+    assert parsed.payload.participant_id == "participant_llm"
+    assert parsed.payload.execution_class == ParticipantExecutionClass.OUTBOUND
+    assert parsed.payload.latency_class == ParticipantLatencyClass.INTERACTIVE
+    assert parsed.payload.outbound_network_access is True
+    assert parsed.payload.supports_mcp is False
+    assert parsed.payload.capabilities == ["llm.query", "llm.summarize", "llm.reason"]
+
+
+def test_participant_llm_status_endpoint_reflects_enablement(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """participant_llm status should expose whether outbound execution is enabled."""
+    monkeypatch.setenv(PARTICIPANT_LLM_ENABLE_ENV_VAR, "true")
+    monkeypatch.setenv(LLM_PROVIDER_ENV_VAR, "anthropic")
+    monkeypatch.setenv(LLM_MODEL_ENV_VAR, "test-llm-model")
+
+    with TestClient(create_participant_llm_app()) as client:
+        response = client.get("/status")
+
+    assert response.status_code == 200
+    parsed = message_from_dict(response.json())
+    assert isinstance(parsed, ParticipantStatusMessage)
+    assert parsed.envelope.message_type == MessageType.FAP_PARTICIPANT_STATUS
+    assert parsed.envelope.sender_id == "participant_llm"
+    assert parsed.payload.participant_id == "participant_llm"
+    assert parsed.payload.health == ParticipantHealth.OK
+    assert parsed.payload.accepting_tasks is True
+    assert parsed.payload.available_capabilities == ["llm.query", "llm.summarize", "llm.reason"]

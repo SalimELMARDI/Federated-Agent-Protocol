@@ -20,36 +20,36 @@ OLLAMA_DEFAULT_BASE_URL = "http://localhost:11434/v1"
 
 SUPPORTED_PROVIDERS = ("anthropic", "openai", "ollama")
 
-# Trust model warning for participant_llm
+# Trust model warning for participant_llm.
 TRUST_MODEL_WARNING = """
-╔════════════════════════════════════════════════════════════════════════════╗
-║                    PARTICIPANT_LLM TRUST MODEL WARNING                     ║
-╚════════════════════════════════════════════════════════════════════════════╝
+========================================================================
+PARTICIPANT_LLM TRUST MODEL WARNING
+========================================================================
 
 This participant sends raw input queries to external LLM providers BEFORE
 governance is applied. This differs from FAP's core "policy before export"
 principle for file-backed participants.
 
-⚠️  GOVERNANCE LIMITATION:
-   • Input queries are transmitted to external APIs UNGOVERNED
-   • Only LLM responses are governed before returning to coordinator
-   • Raw queries may contain sensitive data (PII, credentials, proprietary info)
+GOVERNANCE LIMITATION:
+  - Input queries are transmitted to external APIs UNGOVERNED
+  - Only LLM responses are governed before returning to coordinator
+  - Raw queries may contain sensitive data (PII, credentials, proprietary info)
 
-✓  SAFE TO ENABLE IF:
-   • Queries do not contain sensitive or regulated data
-   • External LLM provider is trusted and compliant
-   • Privacy/compliance requirements allow external transmission
-   • You accept the input-query governance gap
+SAFE TO ENABLE IF:
+  - Queries do not contain sensitive or regulated data
+  - External LLM provider is trusted and compliant
+  - Privacy/compliance requirements allow external transmission
+  - You accept the input-query governance gap
 
-❌  DO NOT ENABLE IF:
-   • Queries may contain PII, PHI, financial data, or trade secrets
-   • Compliance requires data locality (GDPR, HIPAA, SOC2)
-   • Zero-trust policy prohibits ungoverned external transmission
+DO NOT ENABLE IF:
+  - Queries may contain PII, PHI, financial data, or trade secrets
+  - Compliance requires data locality (GDPR, HIPAA, SOC2)
+  - Zero-trust policy prohibits ungoverned external transmission
 
 To acknowledge this trust model and enable the participant, set:
     PARTICIPANT_LLM_ENABLE=true
 
-For more details, see fap/apps/participant_llm/README.md § Trust Model
+For more details, see fap/apps/participant_llm/README.md under "Trust Model".
 """
 
 

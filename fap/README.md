@@ -36,10 +36,11 @@ In the current alpha, the working runtime includes:
 
 - a shared protocol core with typed messages, codec, version-aware dispatch, policy, and identity helpers
 - a DB-first coordinator with durable `protocol_events` and `run_snapshots`
-- four real participants:
+- three local participants:
   - `participant_docs`
   - `participant_kb`
   - `participant_logs`
+- one optional outbound participant:
   - `participant_llm`
 - participant-originated `fap.aggregate.submit`
 - canonical `fap.participant.profile` and `fap.participant.status`
@@ -70,7 +71,7 @@ and exposes these import packages from that shared distribution.
 | `participant_docs` | Reference participant for local document search and governed export |
 | `participant_kb` | Reference participant for local knowledge-base search and governed export |
 | `participant_logs` | Reference participant for local log search and governed export |
-| `participant_llm` | LLM-backed participant for external LLM queries with governed response export (requires explicit opt-in) |
+| `participant_llm` | Optional outbound LLM-backed participant for external queries with governed response export (requires explicit opt-in) |
 
 ## High-Level Architecture
 
