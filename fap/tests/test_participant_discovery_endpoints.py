@@ -141,3 +141,14 @@ def test_participant_llm_status_endpoint_reflects_enablement(
     assert parsed.payload.health == ParticipantHealth.OK
     assert parsed.payload.accepting_tasks is True
     assert parsed.payload.available_capabilities == ["llm.query", "llm.summarize", "llm.reason"]
+
+
+def test_participant_llm_refuses_to_start_without_acknowledgment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """participant_llm should fail startup unless the trust model is explicitly acknowledged."""
+    monkeypatch.delenv(PARTICIPANT_LLM_ENABLE_ENV_VAR, raising=False)
+
+    with pytest.raises(RuntimeError, match="PARTICIPANT_LLM_ENABLE=true"):
+        with TestClient(create_participant_llm_app()):
+            pass

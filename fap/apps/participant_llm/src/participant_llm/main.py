@@ -1,7 +1,8 @@
 """FastAPI entrypoint for the participant_llm service."""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 import logging
-import sys
 
 from fastapi import FastAPI
 
@@ -21,29 +22,34 @@ from participant_llm.config import (
 logger = logging.getLogger(__name__)
 
 
+@asynccontextmanager
+async def _participant_llm_lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Verify trust-model acknowledgment before serving requests."""
+    del app
+    if not is_participant_llm_enabled():
+        logger.error(TRUST_MODEL_WARNING)
+        logger.error(
+            "participant_llm is NOT enabled. Set PARTICIPANT_LLM_ENABLE=true "
+            "to acknowledge the trust model and start the service."
+        )
+        raise RuntimeError(
+            "participant_llm requires PARTICIPANT_LLM_ENABLE=true before startup."
+        )
+
+    logger.warning(
+        "participant_llm is ENABLED. Raw input queries will be sent to external "
+        "LLM provider (%s) BEFORE governance is applied. Ensure compliance with "
+        "your organization's data policies.",
+        get_llm_provider(),
+    )
+    yield
+
+
 def create_app() -> FastAPI:
     """Create the participant_llm application."""
-    app = FastAPI(title="FAP Participant LLM API")
+    app = FastAPI(title="FAP Participant LLM API", lifespan=_participant_llm_lifespan)
     app.state.llm_provider = get_llm_provider()
     app.state.llm_model = get_llm_model()
-
-    @app.on_event("startup")
-    async def check_trust_model_acknowledgment() -> None:
-        """Verify that the operator has acknowledged the trust model before starting."""
-        if not is_participant_llm_enabled():
-            logger.error(TRUST_MODEL_WARNING)
-            logger.error(
-                "participant_llm is NOT enabled. Set PARTICIPANT_LLM_ENABLE=true "
-                "to acknowledge the trust model and start the service."
-            )
-            sys.exit(1)
-
-        logger.warning(
-            "participant_llm is ENABLED. Raw input queries will be sent to external "
-            "LLM provider (%s) BEFORE governance is applied. Ensure compliance with "
-            "your organization's data policies.",
-            get_llm_provider(),
-        )
 
     app.include_router(health_router)
     app.include_router(profile_router)
